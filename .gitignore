@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment / Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Node (au cas ou)
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log

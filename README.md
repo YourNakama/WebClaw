@@ -258,6 +258,24 @@ Looking for inspiration? Here are some skills we think the community would benef
 - **Weekly Review Agent** — Summarizes the week's journal entries and extracts pending tasks
 - **Translation Agent** — Translates documents while preserving formatting and frontmatter
 
+## Support WebClaw
+
+WebClaw is **100% free** — no premium tier, no usage limits, no features behind a paywall. The project is funded entirely by voluntary donations.
+
+If WebClaw or these skills save you time, consider supporting the project:
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20WebClaw-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/nakamacyber)
+
+Every contribution helps keep the project alive and growing. Ko-fi takes 0% commission — 100% goes to the developer.
+
+Your support funds:
+- New skills and skill improvements
+- WebClaw app development and maintenance
+- Infrastructure and hosting costs
+- Community support and documentation
+
+No features are locked behind donations. WebClaw stays free forever.
+
 ## License
 
 MIT — Skills contributed to this repo are shared under the MIT license for free community use.
