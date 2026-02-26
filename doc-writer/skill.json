@@ -1,8 +1,8 @@
 {
   "id": "doc-writer",
   "name": "Doc Writer",
-  "description": "Writes quality, humanized documentation with proper structure, YAML frontmatter, and organized file placement. Follows the DocLifecycle + Humanizer + QualityGate methodology.",
-  "version": "1.0.0",
+  "description": "Writes consultant-grade documentation with pedagogical depth, Mermaid diagrams, attack scenarios, and natural voice. Follows DocLifecycle + Consultant Voice + QualityGate methodology.",
+  "version": "2.0.0",
   "author": "NakamaCyber",
   "category": "tool",
   "icon": "FileText",
