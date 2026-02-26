@@ -24,7 +24,7 @@ There are 3 types:
 
 | Skill | Type | Description |
 |-------|------|-------------|
-| [doc-writer](./doc-writer/) | Tool | Writes quality, humanized documentation with YAML frontmatter, proper structure, and smart file placement. Follows the DocLifecycle + Humanizer + QualityGate methodology. |
+| [doc-writer](./doc-writer/) | Tool | Writes consultant-grade documentation with pedagogical depth, Mermaid diagrams, attack scenarios, and natural voice. Follows DocLifecycle + Consultant Voice + QualityGate methodology. |
 
 ## How to Install a Skill
 
@@ -102,7 +102,7 @@ Every skill needs a `skill.json` at its root:
 For **tool** and **template** skills, `prompt.md` contains the instructions injected into the AI's system prompt. Write it as clear directives for an LLM.
 
 **Limits:**
-- Maximum **5,000 characters**
+- Maximum **8,000 characters**
 - No HTML or `<script>` tags (stripped automatically)
 - Markdown formatting is preserved
 
@@ -200,7 +200,7 @@ WebClaw enforces strict safety boundaries on all skills:
 | Constraint | Limit |
 |------------|-------|
 | Manifest size | 10 KB max |
-| Prompt size | 5,000 characters max |
+| Prompt size | 8,000 characters max |
 | Workflow steps | 10 max per skill |
 | Tool calls per step | 5 max |
 | Total tool calls per workflow | 50 max |

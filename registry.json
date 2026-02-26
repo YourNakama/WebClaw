@@ -3,12 +3,12 @@
     {
       "id": "doc-writer",
       "name": "Doc Writer",
-      "description": "Writes quality, humanized documentation with proper structure, YAML frontmatter, and organized file placement.",
-      "version": "1.0.0",
+      "description": "Writes consultant-grade documentation with pedagogical depth, Mermaid diagrams, attack scenarios, and natural voice.",
+      "version": "2.0.0",
       "author": "NakamaCyber",
       "category": "tool",
       "icon": "FileText",
-      "tags": ["documentation", "writing", "quality", "humanizer"]
+      "tags": ["documentation", "writing", "consultant", "mermaid", "quality"]
     }
   ]
 }
