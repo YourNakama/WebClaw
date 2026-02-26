@@ -2,7 +2,7 @@
   <img src="./assets/logo.png" alt="WebClaw by NakamaCyber" width="160" />
 </p>
 
-<h1 align="center">WebClaw</h1>
+<h1 align="center">WebClaw by NakamaCyber</h1>
 
 <p align="center">
   <strong>The AI-powered document workspace that runs in your browser.</strong><br/>
