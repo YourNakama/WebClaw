@@ -5,352 +5,371 @@
 <h1 align="center">WebClaw</h1>
 
 <p align="center">
-  <strong>L'assistant IA documentaire qui tourne dans votre navigateur.</strong><br/>
-  Donationware. Gratuit. Aucune installation. Amenez votre propre IA.
+  <strong>The AI-powered document workspace that runs in your browser.</strong><br/>
+  Free forever. Secure by design. No install. Bring your own AI.
 </p>
 
 <p align="center">
-  <a href="https://ko-fi.com/nakamacyber"><img src="https://img.shields.io/badge/Ko--fi-Soutenir%20le%20projet-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
-  <img src="https://img.shields.io/badge/mod%C3%A8le-donationware-brightgreen?style=flat-square" alt="Donationware">
-  <img src="https://img.shields.io/badge/app-gratuite-blue?style=flat-square" alt="Gratuit">
+  <a href="https://webclaw.nakamacyber.ai"><img src="https://img.shields.io/badge/Try%20it-webclaw.nakamacyber.ai-7c3aed?style=for-the-badge" alt="Try WebClaw"></a>
+</p>
+
+<p align="center">
+  <a href="https://ko-fi.com/nakamacyber"><img src="https://img.shields.io/badge/Ko--fi-Support%20the%20project-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
+  <img src="https://img.shields.io/badge/model-donationware-brightgreen?style=flat-square" alt="Donationware">
+  <img src="https://img.shields.io/badge/app-free%20forever-blue?style=flat-square" alt="Free">
 </p>
 
 ---
 
-**Imaginez un outil qui...**
-
-- Transforme un PDF d'appel d'offres de 80 pages en synthèse + plan de réponse en 10 minutes
-- Rédige un guide technique de 30 pages avec diagrammes, exemples de code et voix humaine
-- Convertit vos notes de réunion brutes en compte-rendu pro avec actions et deadlines
-- Organise des mois de documents éparpillés en base de connaissances structurée
-
-**...le tout depuis un onglet de navigateur, sans rien installer, avec vos données qui restent chez vous.**
-
-C'est WebClaw. Ouvrez le site, connectez-vous avec GitHub, et commencez à travailler.
+<!-- TODO: Replace with an animated GIF or video showcasing the app -->
+<!-- Suggested content: a 30-60s screen recording showing:
+     1. Landing page → Connect with GitHub → vault opens
+     2. Creating a document with the AI assistant (Ctrl+K)
+     3. AI generating a structured guide with Mermaid diagrams
+     4. Installing a skill from the hub in Settings
+     5. Printing / exporting a polished document
+-->
+<p align="center">
+  <img src="./assets/demo.gif" alt="WebClaw in action — AI document assistant in the browser" width="720" />
+  <br/>
+  <em>WebClaw in action — try it at <a href="https://webclaw.nakamacyber.ai">webclaw.nakamacyber.ai</a></em>
+</p>
 
 ---
 
-## Ce que c'est
+## What if you could...
 
-WebClaw est une **application web gratuite** pour créer, organiser et produire des documents professionnels assistés par IA. Pas un logiciel à installer, pas un SaaS à 20$/mois — une app dans votre navigateur, point final.
+- Turn an 80-page RFP into a structured summary + response plan in 10 minutes
+- Generate a 30-page technical guide with diagrams, code examples, and a human voice
+- Convert raw meeting notes into a professional report with decisions and action items
+- Organize months of scattered documents into a searchable knowledge base
 
-Vous y accédez via l'URL de l'application. Vous vous connectez avec votre compte GitHub. Vos documents sont stockés dans votre propre dépôt GitHub — pas sur nos serveurs. L'IA, c'est vous qui la choisissez (Claude, OpenAI, Ollama, etc.) et c'est votre clé API.
+**...all from a browser tab. No install. Your data stays yours.**
 
-Ce dépôt que vous lisez en ce moment est le hub officiel de WebClaw : documentation de l'application, skills communautaires, et espace d'échange. Les skills de ce repo sont partagés sous licence MIT pour la communauté.
+That's [**WebClaw**](https://webclaw.nakamacyber.ai).
 
-### Donationware : gratuit, financé par vous
+---
 
-WebClaw est un projet **donationware**. Ça veut dire :
+## Quick start
 
-- **Toutes les fonctionnalités sont accessibles à tout le monde, tout le temps.** Pas de version "Pro", pas de limites, pas de fonctionnalités cachées.
-- **Le projet vit grâce aux dons de ses utilisateurs.** Si WebClaw vous fait gagner du temps, vous pouvez choisir de le soutenir — mais ce n'est jamais une obligation.
-- **Votre don finance directement** le développement, les nouveaux skills, l'hébergement et la documentation.
+> **[webclaw.nakamacyber.ai](https://webclaw.nakamacyber.ai)** — open it, sign in with GitHub, start working.
 
-C'est un modèle de confiance. On construit un outil de qualité, on le met à disposition de tous, et on fait confiance à ceux qui en bénéficient pour aider à le faire vivre.
+```
+1. Go to webclaw.nakamacyber.ai
+2. Sign in with GitHub (one click)
+3. Create or connect a vault (= a GitHub repo for your documents)
+4. Plug in your AI in Settings (Claude, OpenAI, Ollama… your choice)
+5. Install skills from the community hub
+6. Work.
+```
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Soutenir%20WebClaw-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/nakamacyber)
+No terminal. No Docker. No `npm install`. No subscription. A browser and a GitHub account — that's it.
 
-Ko-fi prend **0% de commission** — 100% va au développeur.
+Full walkthrough: **[Getting started](./documentation/01-getting-started.md)**
 
-## OpenClaw dans le navigateur, en plus simple et plus sûr
+---
 
-Vous connaissez peut-être [OpenClaw](https://github.com/openclaw/openclaw), l'agent IA open-source phénomène (191k+ stars) qui automatise tout sur votre machine : shell, fichiers, web, messagerie. C'est incroyablement puissant... mais il faut un terminal, des connaissances techniques, et vous donnez à l'IA un accès complet à votre système.
+## OpenClaw for the browser — simpler and safer
 
-**WebClaw reprend les meilleures idées d'OpenClaw** — le BYOK (Bring Your Own Key), les skills communautaires, l'IA qui agit sur vos fichiers — **et les rend accessibles à tout le monde** :
+You might know [OpenClaw](https://github.com/openclaw/openclaw), the open-source AI agent phenomenon (191k+ stars) that automates everything on your machine: shell, files, web, messaging. It's incredibly powerful — but you need a terminal, technical knowledge, and you give the AI full access to your system.
+
+**WebClaw takes the best ideas from OpenClaw** — BYOK (Bring Your Own Key), community skills, AI that acts on your files — **and makes them accessible to everyone:**
 
 | | OpenClaw | WebClaw |
 |:--|:---------|:--------|
-| **Pour commencer** | Terminal + Docker + config YAML | **Ouvrir un navigateur. C'est tout.** |
-| **Qui l'utilise** | Développeurs, power users | **Tout le monde** — consultants, chercheurs, étudiants, managers, rédacteurs |
-| **Ce que l'IA peut faire** | Tout (shell, web, système, API) | **Vos documents uniquement** — lire, écrire, organiser, rechercher |
-| **Sécurité** | L'IA a accès à votre système entier | **Sandbox strict** — 8 outils, zéro accès système, approbation à chaque modification |
-| **Vos clés API** | Fichier texte en clair | **Chiffrées AES-256-GCM** dans votre navigateur |
-| **Vos données** | Sur votre machine locale | **Dans votre GitHub** — versionnées, portables, à vous pour toujours |
-| **Modèle économique** | Open source | **Donationware** — gratuit, financé par la communauté |
+| **To get started** | Terminal + Docker + YAML config | **Open a browser. That's it.** |
+| **Who uses it** | Developers, power users | **Everyone** — consultants, researchers, students, managers, writers |
+| **What AI can do** | Everything (shell, web, system, APIs) | **Your documents only** — read, write, organize, search |
+| **Security** | AI has access to your entire system | **Strict sandbox** — 8 tools, zero system access, approval on every change |
+| **Your API keys** | Plain text config file | **AES-256-GCM encrypted** in your browser |
+| **Your data** | On your local machine | **In your GitHub** — versioned, portable, yours forever |
+| **Pricing** | Open source | **Donationware** — free, community-funded |
 
-WebClaw n'est pas "OpenClaw en moins bien". C'est OpenClaw **repensé pour les gens qui produisent des documents** — et qui n'ont pas envie de configurer un Docker Compose pour rédiger un rapport.
+WebClaw isn't "OpenClaw but worse". It's OpenClaw **rethought for people who produce documents** — and who don't want to configure a Docker Compose just to write a report.
 
-## Ce que WebClaw change au quotidien
+---
 
-### Vous êtes consultant ou freelance
+## How WebClaw changes your day
 
-Lundi matin. Un client vous envoie un appel d'offres de 80 pages. Avant, vous passiez la journée à le lire, surligner, copier-coller dans un tableau Excel. Avec WebClaw :
+### You're a consultant or freelancer
 
-1. Glissez le PDF dans votre vault
-2. *"Lis cet AO et extrais toutes les exigences sous forme de matrice de conformité"*
-3. *"Rédige un plan de réponse structuré avec les sections du mémoire technique"*
-4. *"Rédige la section Architecture en t'appuyant sur notre stack Next.js + microservices"*
+Monday morning. A client sends you an 80-page RFP. Before, you'd spend the day reading, highlighting, copy-pasting into an Excel sheet. With WebClaw:
 
-En 2 heures, vous avez une synthèse, une matrice, un plan et un premier jet. Le reste de la journée, vous affinez. Votre concurrent est encore en train de lire la page 40.
+1. Drop the PDF into your vault
+2. *"Read this RFP and extract all requirements as a compliance matrix"*
+3. *"Write a structured response plan with the sections of the technical proposal"*
+4. *"Draft the Architecture section based on our Next.js + microservices stack"*
 
-### Vous êtes développeur ou tech lead
+In 2 hours you have a summary, a matrix, a plan, and a first draft. The rest of the day, you refine. Your competitor is still reading page 40.
 
-Votre équipe grandit. Les décisions d'architecture sont prises en réunion mais jamais documentées. Les nouveaux arrivants posent les mêmes questions. Avec WebClaw :
+### You're a developer or tech lead
 
-- *"Documente l'architecture de notre service d'auth avec les flux OAuth et les diagrammes de séquence"*
-- *"Crée un guide de développement pour notre stack avec les conventions, le testing et le déploiement"*
-- *"Transforme mes notes du post-mortem d'hier en rapport structuré avec timeline et actions correctives"*
+Your team is growing. Architecture decisions are made in meetings but never documented. New hires ask the same questions. With WebClaw:
 
-Chaque document est un fichier Markdown dans votre GitHub. Versionné. Cherchable. Partageable.
+- *"Document our auth service architecture with OAuth flows and sequence diagrams"*
+- *"Create a development guide for our stack with conventions, testing, and deployment"*
+- *"Turn my post-mortem notes into a structured report with timeline and corrective actions"*
 
-### Vous êtes chercheur ou étudiant
+Every document is a Markdown file in your GitHub. Versioned. Searchable. Shareable.
 
-Des dizaines de notes de lecture, d'articles annotés, de brouillons de chapitres. Avec WebClaw :
+### You're a researcher or student
 
-- *"Organise mes notes de lecture par thème et crée un index avec liens croisés"*
-- *"Transforme mes notes brutes sur la méthodologie en section rédigée pour mon mémoire"*
-- *"Crée une fiche de synthèse comparative de ces 3 articles que j'ai importés"*
+Dozens of reading notes, annotated articles, chapter drafts. With WebClaw:
 
-### Vous gérez une équipe
+- *"Organize my reading notes by theme and create a cross-linked index"*
+- *"Turn my rough methodology notes into a polished section for my thesis"*
+- *"Create a comparative summary of these 3 articles I imported"*
 
-Les comptes-rendus de réunion, les processus, les guides d'onboarding — tout est dans des emails et des Google Docs éparpillés. Avec WebClaw :
+### You manage a team
 
-- *"Formate mes notes de standup en compte-rendu avec décisions et actions"*
-- *"Crée un guide d'onboarding pour les nouveaux développeurs de l'équipe"*
-- *"Fais un résumé hebdomadaire de tout ce qui a été documenté cette semaine dans le vault"*
+Meeting minutes, processes, onboarding guides — all buried in emails and scattered Google Docs. With WebClaw:
 
-## Comment ça marche
+- *"Format my standup notes as a report with decisions and action items"*
+- *"Create an onboarding guide for new developers joining the team"*
+- *"Summarize everything documented in the vault this week"*
 
-```
-1. Allez sur WebClaw depuis votre navigateur
-2. Connectez-vous avec GitHub (un clic)
-3. Créez ou connectez un vault (= un repo GitHub pour vos documents)
-4. Branchez votre IA dans les paramètres (Claude, OpenAI, Ollama...)
-5. Installez des skills depuis le hub
-6. Travaillez.
-```
+---
 
-Pas de terminal. Pas de Docker. Pas de `npm install`. Pas d'abonnement. Un navigateur et un compte GitHub, c'est tout.
+## Skills: superpowers for your AI
 
-### Les skills : des super-pouvoirs pour votre IA
+Skills are what makes WebClaw unique. They're **specialized instructions** the community creates and shares to make the AI assistant better at specific tasks.
 
-Les skills sont ce qui rend WebClaw unique. Ce sont des **instructions spécialisées** que la communauté crée et partage pour rendre l'assistant IA meilleur dans des tâches précises.
+**Example: the `doc-writer` skill** turns the AI into a consultant-grade writer. Without it, ask the AI to write a guide and you get a generic blog post. With it, you get a real professional deliverable: structured frontmatter, table of contents, Mermaid diagrams, natural voice, controlled prose/code ratio.
 
-**Exemple : le skill `doc-writer`** transforme l'IA en rédacteur de niveau consultant. Sans lui, demandez à l'IA d'écrire un guide et vous obtenez un article de blog générique. Avec lui, vous obtenez un vrai livrable professionnel : frontmatter structuré, table des matières, diagrammes Mermaid, voix naturelle, ratio prose/code maîtrisé.
+There are 3 types:
 
-Il existe 3 types de skills :
+| Type | One-liner | Example |
+|------|-----------|---------|
+| **Tool** | Changes how the AI writes and thinks | `doc-writer` — consultant-grade documentation |
+| **Template** | Generates a complete document in one prompt | Proposal, audit report, meeting minutes |
+| **Agent** | Multi-step automated workflow | Scan vault → report issues → fix them |
 
-| Type | En une phrase | Exemple |
-|------|--------------|---------|
-| **Tool** | Change la manière dont l'IA écrit et réfléchit | `doc-writer` — rédaction de grade consultant |
-| **Template** | Génère un document complet en un clic | Proposition commerciale, rapport d'audit, CR de réunion |
-| **Agent** | Workflow automatisé en plusieurs étapes | Scan du vault → rapport des problèmes → corrections |
+Skills are **pure data** (JSON + Markdown). No code, no plugins, no npm install. The AI can only act on your files, and every change requires your approval.
 
-Les skills sont **pure data** (JSON + Markdown). Pas de code, pas de plugins, pas de npm install. L'IA ne peut agir que sur vos fichiers, et chaque modification vous demande votre accord.
+**Install a skill:** Settings > Skills > Install > Enable. 10 seconds.
 
-**Installer un skill :**
-Settings > Skills > Install > Activer. 10 secondes.
-
-### Skills disponibles
+### Available skills
 
 | Skill | Type | Description |
 |-------|------|-------------|
-| [doc-writer](./doc-writer/) | Tool | Rédaction de grade consultant — profondeur pédagogique, diagrammes Mermaid, scénarios d'attaque, voix naturelle. Méthodologie DocLifecycle + Consultant Voice + QualityGate. |
+| [doc-writer](./doc-writer/) | Tool | Consultant-grade documentation — pedagogical depth, Mermaid diagrams, attack scenarios, natural voice. DocLifecycle + Consultant Voice + QualityGate methodology. |
 
-*D'autres arrivent. Vous pouvez aussi [créer le vôtre](./documentation/06-creer-un-skill.md).*
+*More coming soon. You can also [create your own](./documentation/06-creating-a-skill.md).*
 
-## Sécurité : pas un argument marketing, une architecture
+---
 
-WebClaw est conçu pour les gens qui manipulent des documents sensibles — réponses à AO, données clients, architecture technique. La sécurité n'est pas une option qu'on coche, c'est la fondation.
+## Security: not a feature, the foundation
 
-**Vos secrets ne quittent jamais votre navigateur.** Token GitHub, clés API : tout est chiffré AES-256-GCM via l'API WebCrypto native de votre navigateur et stocké dans IndexedDB. Aucun serveur ne les voit en clair. Le serveur ne fait qu'une seule chose : l'échange OAuth. Zéro donnée de vault ne le traverse.
+WebClaw is built for people who handle sensitive documents — RFP responses, client data, technical architecture. Security isn't a checkbox, it's the architecture.
 
-**L'IA ne peut pas faire n'importe quoi.** Elle a accès à 8 outils. Pas de shell, pas de réseau, pas d'accès système. Et chaque fois qu'elle veut créer, modifier ou supprimer un fichier : elle vous demande. Pas de raccourci.
+**Your secrets never leave your browser.** GitHub token, API keys — everything is AES-256-GCM encrypted via your browser's native WebCrypto API and stored in IndexedDB. No server sees them in plain text. The server does one thing only: the OAuth handshake. Zero vault data passes through it.
 
-**Les skills ne peuvent pas être malveillants.** Ils sont de la pure data — du JSON et du Markdown. Pas de `eval()`, pas de `import()`, pas de code exécutable. Ils viennent d'une source unique de confiance (ce repo). Ils sont validés avant d'atteindre votre navigateur.
+**The AI can't do whatever it wants.** It has access to 8 tools. No shell, no network, no system access. And every time it wants to create, edit, or delete a file: it asks you. No shortcut.
+
+**Skills can't be malicious.** They're pure data — JSON and Markdown. No `eval()`, no `import()`, no executable code. They come from a single trusted source (this repo). They're validated before reaching your browser.
 
 <details>
-<summary><strong>Détails techniques de sécurité</strong></summary>
+<summary><strong>Technical security details</strong></summary>
 
 ### Architecture
 
 ```
-Navigateur (100% côté client)
+Browser (100% client-side)
 ├── GitHub OAuth
-├── Token chiffré AES-256-GCM → IndexedDB
-├── Clés API chiffrées AES-256-GCM → IndexedDB
-├── Octokit.js — appels GitHub API directs
-├── CodeMirror 6 — éditeur
-├── DOMPurify — protection XSS
-└── marked.js — rendu Markdown
+├── Token encrypted AES-256-GCM → IndexedDB
+├── API keys encrypted AES-256-GCM → IndexedDB
+├── Octokit.js — direct GitHub API calls
+├── CodeMirror 6 — editor
+├── DOMPurify — XSS protection
+└── marked.js — Markdown rendering
 
-Serveur (minimal)
-├── Pages statiques (Next.js)
-└── /api/auth/* — échange OAuth uniquement
+Server (minimal)
+├── Static pages (Next.js)
+└── /api/auth/* — OAuth exchange only
 ```
 
-### Couches de protection
+### Protection layers
 
-| Couche | Protection |
-|--------|-----------|
-| Tokens & clés API | AES-256-GCM via WebCrypto + IndexedDB |
-| XSS (HTML) | DOMPurify avec allowlist stricte |
-| XSS (Liens) | `target="_blank"` + `rel="noopener noreferrer"` |
-| CSP | `script-src 'self'`, `connect-src` whitelist GitHub, `frame-src 'none'` |
+| Layer | Protection |
+|-------|-----------|
+| Tokens & API keys | AES-256-GCM via WebCrypto + IndexedDB |
+| XSS (HTML) | DOMPurify with strict allowlist |
+| XSS (Links) | `target="_blank"` + `rel="noopener noreferrer"` |
+| CSP | `script-src 'self'`, `connect-src` GitHub whitelist, `frame-src 'none'` |
 | Headers | HSTS, X-Frame-Options DENY, nosniff, Permissions-Policy |
-| OAuth | Protection CSRF via state |
-| Transit | Zéro donnée du vault côté serveur |
+| OAuth | CSRF protection via state parameter |
+| Data transit | Zero vault data on server side |
 
-### Limites des skills
+### Skill limits
 
-| Contrainte | Limite |
-|------------|--------|
-| Exécution de code | **Aucune** |
-| Accès réseau | **Aucun** |
-| Outils autorisés | 8 outils sandboxés uniquement |
-| Manifest | 10 KB max |
-| Prompt | 8 000 caractères max |
-| Steps par workflow | 10 max |
-| Appels d'outils par step | 5 max |
-| Total par workflow | 50 max |
+| Constraint | Limit |
+|------------|-------|
+| Code execution | **None** |
+| Network access | **None** |
+| Allowed tools | 8 sandboxed tools only |
+| Manifest size | 10 KB max |
+| Prompt size | 8,000 characters max |
+| Steps per workflow | 10 max |
+| Tool calls per step | 5 max |
+| Total per workflow | 50 max |
 
 </details>
 
-## Apportez votre propre IA
+---
 
-WebClaw ne vous impose pas un modèle. Vous choisissez, vous payez (ou pas), vous changez quand vous voulez.
+## Bring your own AI
 
-| Fournisseur | Ce qu'il faut | Prix |
-|-------------|--------------|------|
-| **Claude** (Anthropic) | Clé API | Pay-per-use |
-| **OpenAI** (GPT-4o) | Clé API | Pay-per-use |
-| **OpenRouter** | Clé API (accès à 200+ modèles) | Pay-per-use |
-| **Ollama** | Installé sur votre machine | **Gratuit, 100% local** |
-| **Custom** | N'importe quelle API compatible OpenAI | Variable |
+WebClaw doesn't lock you into a model. You choose, you pay (or don't), you switch whenever you want.
 
-Avec **Ollama**, aucune donnée ne quitte votre machine. Zéro coût, zéro tracking, zéro dépendance cloud.
+| Provider | What you need | Cost |
+|----------|--------------|------|
+| **Claude** (Anthropic) | API key | Pay-per-use |
+| **OpenAI** (GPT-4o) | API key | Pay-per-use |
+| **OpenRouter** | API key (access to 200+ models) | Pay-per-use |
+| **Ollama** | Installed on your machine | **Free, 100% local** |
+| **Custom** | Any OpenAI-compatible API | Varies |
 
-Configuration : Settings > General > choisir le fournisseur > entrer la clé > Save. 30 secondes.
+With **Ollama**, no data leaves your machine. Zero cost, zero tracking, zero cloud dependency.
 
-Guide complet : [Connecter son IA](./documentation/03-connecter-son-ia.md)
+Setup: Settings > General > pick provider > enter key > Save. 30 seconds.
+
+Full guide: **[Connect your AI](./documentation/03-connect-your-ai.md)**
+
+---
 
 ## Documentation
 
-Tout est documenté, pas à pas, pour utiliser l'application :
+Step-by-step guides to get the most out of [webclaw.nakamacyber.ai](https://webclaw.nakamacyber.ai):
 
 | Guide | Description |
 |-------|-------------|
-| [Premiers pas](./documentation/01-demarrage-rapide.md) | Créer son compte, configurer son vault, premiers documents |
-| [Connexion & authentification](./documentation/02-connexion-authentification.md) | Comprendre le flux de connexion et la sécurité |
-| [Connecter son IA](./documentation/03-connecter-son-ia.md) | Configurer Claude, OpenAI, OpenRouter, Ollama ou un endpoint custom |
-| [Installer un skill](./documentation/04-installer-utiliser-skill.md) | Parcourir le hub, installer, activer et utiliser les skills |
-| [Exemples concrets](./documentation/05-exemples-concrets.md) | Pas-à-pas détaillés : AO, guides techniques, rapports, bases de connaissances |
-| [Créer un skill](./documentation/06-creer-un-skill.md) | Contribuez vos propres skills à la communauté |
+| [Getting started](./documentation/01-getting-started.md) | Sign up, create your vault, write your first document |
+| [Authentication & security](./documentation/02-authentication.md) | How sign-in works and why it's secure |
+| [Connect your AI](./documentation/03-connect-your-ai.md) | Set up Claude, OpenAI, OpenRouter, Ollama, or a custom endpoint |
+| [Install & use skills](./documentation/04-install-use-skills.md) | Browse the hub, install, enable, and use skills |
+| [Real-world examples](./documentation/05-real-world-examples.md) | Detailed walkthroughs: RFPs, tech guides, reports, knowledge bases |
+| [Create a skill](./documentation/06-creating-a-skill.md) | Full spec to contribute your own skills to the community |
 
-## Ce dépôt
+---
 
-Ce repo est le **coeur public de WebClaw**. Il a deux rôles :
+## This repository
 
-1. **Documentation** — Tout ce qu'il faut pour prendre en main l'application, comprendre ses fonctionnalités, et l'utiliser efficacement
-2. **Hub de skills** — Le registre central des skills communautaires que l'application charge automatiquement
+This repo is the **public heart of WebClaw**. It serves two purposes:
+
+1. **Documentation** — Everything you need to learn and master the app at [webclaw.nakamacyber.ai](https://webclaw.nakamacyber.ai)
+2. **Skill Hub** — The central registry of community skills that the app loads automatically
 
 ```
 WebClaw/
-├── README.md                  vous êtes ici
+├── README.md                  ← you are here
 ├── assets/
-│   └── logo.png
-├── registry.json              registre des skills
-├── documentation/             guides utilisateur
-│   ├── 01-demarrage-rapide.md
-│   ├── 02-connexion-authentification.md
-│   ├── 03-connecter-son-ia.md
-│   ├── 04-installer-utiliser-skill.md
-│   ├── 05-exemples-concrets.md
-│   └── 06-creer-un-skill.md
-├── doc-writer/                skill "Doc Writer"
+│   ├── logo.png
+│   └── demo.gif               ← app demo (TODO)
+├── registry.json              skill registry
+├── documentation/             user guides
+│   ├── 01-getting-started.md
+│   ├── 02-authentication.md
+│   ├── 03-connect-your-ai.md
+│   ├── 04-install-use-skills.md
+│   ├── 05-real-world-examples.md
+│   └── 06-creating-a-skill.md
+├── doc-writer/                "Doc Writer" skill
 │   ├── skill.json
 │   └── prompt.md
-└── ...                        futurs skills
+└── ...                        future community skills
 ```
 
-## La roadmap — et vos idées
+---
 
-### Skills qui arrivent
+## Roadmap & ideas
 
-| Skill | Ce qu'il fera |
-|-------|--------------|
-| **Meeting Notes** | Notes de réunion → CR structuré avec décisions et actions en un prompt |
-| **AO Response Writer** | Digestion d'AO + matrice de conformité + plan de réponse |
-| **Vault Cleanup Agent** | Scan automatique des fichiers vides, frontmatter manquant, liens cassés |
-| **Translation Agent** | Traduction de documents en préservant le formatage |
-| **Zettelkasten Builder** | Note-taking atomique avec `[[wiki-links]]` et index |
-| **Weekly Review Agent** | Résumé hebdomadaire de votre activité dans le vault |
-| **API Doc Generator** | Documentation REST API structurée à partir d'entrées libres |
-| **Audit Report** | Rapport d'audit avec matrice de risques et recommandations |
-| **Onboarding Guide** | Guide d'accueil pour nouveaux membres d'équipe |
-| **Changelog Writer** | Maintenance automatique d'un CHANGELOG.md propre |
+### Upcoming skills
 
-### Améliorations de l'application
+| Skill | What it will do |
+|-------|----------------|
+| **Meeting Notes** | Raw notes → structured report with decisions and action items |
+| **RFP Response Writer** | RFP digest + compliance matrix + response plan |
+| **Vault Cleanup Agent** | Auto-scan for empty files, missing frontmatter, broken links |
+| **Translation Agent** | Translate documents while preserving formatting |
+| **Zettelkasten Builder** | Atomic note-taking with `[[wiki-links]]` and index files |
+| **Weekly Review Agent** | Weekly summary of vault activity + pending tasks |
+| **API Doc Generator** | Structured REST API docs from free-form input |
+| **Audit Report** | Audit report with risk matrix and recommendations |
+| **Onboarding Guide** | Welcome guide for new team members |
+| **Changelog Writer** | Automated CHANGELOG.md maintenance |
 
-- **Variables dans les prompts** — `{{projet}}`, `{{stack}}`, `{{client}}` pour personnaliser les skills
-- **Skills composables** — Combiner plusieurs skills dans un même workflow
-- **Versioning de skills** — Notification de mise à jour disponible
-- **Historique des conversations IA** — Retrouver et reprendre des sessions passées
-- **Mode collaboratif** — Édition à plusieurs via GitHub branches + merge assisté par IA
-- **Support Obsidian** — Compatibilité bidirectionnelle avec les vaults Obsidian existants
-- **Import/export de skills** — Partager vos skills personnalisés sans passer par le hub
-- **Marketplace communautaire** — Interface web pour parcourir, noter et découvrir des skills
+### App improvements
 
-**Vous avez une idée ?** [Ouvrez une issue](https://github.com/YourNakama/WebClaw/issues). On construit WebClaw avec sa communauté.
+- **Prompt variables** — `{{project}}`, `{{stack}}`, `{{client}}` to personalize skills
+- **Composable skills** — Chain multiple skills in a single workflow
+- **Skill versioning** — Update notifications when a new version is available
+- **Conversation history** — Save and resume past AI sessions
+- **Collaborative mode** — Multi-user editing via GitHub branches + AI-assisted merge
+- **Obsidian compatibility** — Bidirectional sync with existing Obsidian vaults
+- **Skill import/export** — Share custom skills without going through the hub
+- **Community marketplace** — Web interface to browse, rate, and discover skills
 
-## Contribuer
+**Have an idea?** [Open an issue](https://github.com/YourNakama/WebClaw/issues). We build WebClaw with its community.
 
-Deux façons de participer :
+---
 
-**Créer un skill** — Forkez ce repo, créez votre dossier avec `skill.json` + `prompt.md`, ajoutez-le dans `registry.json`, ouvrez une PR. [Guide complet ici](./documentation/06-creer-un-skill.md).
+## Contributing
 
-**Proposer une idée** — Pas envie d'écrire le manifest ? [Ouvrez une issue](https://github.com/YourNakama/WebClaw/issues) et décrivez le skill ou la fonctionnalité que vous aimeriez voir.
+Two ways to participate:
 
-Les contributions sont revues sur : utilité, qualité du prompt, sécurité, et clarté du nommage.
+**Create a skill** — Fork this repo, create your folder with `skill.json` + `prompt.md`, add it to `registry.json`, open a PR. [Full guide here](./documentation/06-creating-a-skill.md).
 
-## Soutenir le projet
+**Suggest an idea** — Don't want to write the manifest? [Open an issue](https://github.com/YourNakama/WebClaw/issues) describing the skill or feature you'd like.
 
-WebClaw est un **donationware**. Le modèle est simple : tout est gratuit, tout est accessible, et ceux qui en bénéficient peuvent choisir de soutenir le projet.
+Contributions are reviewed for: usefulness, prompt quality, security, and naming clarity.
 
-Pas de version Pro à débloquer. Pas de compteur de documents. Pas de "votre essai expire dans 7 jours". Jamais.
+---
 
-On croit qu'un consultant freelance, un étudiant en thèse, une asso avec trois bénévoles — tout le monde mérite des outils pros pour travailler avec l'IA. Pas seulement ceux qui peuvent se payer un abonnement.
+## Support the project
 
-Si WebClaw vous fait gagner du temps, vous pouvez aider le projet à vivre et grandir :
+WebClaw is **donationware**. The model is simple: everything is free, everything is accessible, and those who benefit can choose to support the project.
+
+No Pro plan to unlock. No document counter. No "your trial expires in 7 days". Ever.
+
+We believe a freelance consultant, a grad student, a three-person nonprofit — everyone deserves professional tools to work with AI. Not just those who can afford a $20/month subscription.
+
+If WebClaw saves you time, you can help it live and grow:
 
 <p align="center">
   <a href="https://ko-fi.com/nakamacyber">
-    <img src="https://img.shields.io/badge/Ko--fi-Soutenir%20WebClaw-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Soutenir sur Ko-fi">
+    <img src="https://img.shields.io/badge/Ko--fi-Support%20WebClaw-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support on Ko-fi">
   </a>
 </p>
 
-Ko-fi prend **0% de commission** — 100% va au développeur.
+Ko-fi takes **0% commission** — 100% goes to the developer. Your donations fund development, new skills, hosting, and documentation.
 
-**Vos dons financent :**
-- Le développement de l'application et des nouveaux skills
-- L'hébergement et l'infrastructure
-- La documentation et le support communautaire
-- Le temps passé à répondre aux issues et aux PRs
+**No feature will ever be locked behind a donation. That's a promise.**
 
-**Aucune fonctionnalité ne sera jamais verrouillée derrière un don. C'est une promesse.**
+---
 
-## Stack technique
+## Tech stack
 
-| Couche | Technologie |
-|--------|------------|
+| Layer | Technology |
+|-------|-----------|
 | Framework | Next.js 16 (App Router) |
 | UI | React 19 + Tailwind CSS 4 + shadcn/ui |
 | Auth | GitHub OAuth + CSRF |
-| Éditeur | CodeMirror 6 |
+| Editor | CodeMirror 6 |
 | Preview | marked.js + DOMPurify |
-| Diagrammes | Mermaid |
-| Fichiers | GitHub Contents API via Octokit |
-| Chiffrement | WebCrypto AES-256-GCM + IndexedDB |
+| Diagrams | Mermaid |
+| File backend | GitHub Contents API via Octokit |
+| Encryption | WebCrypto AES-256-GCM + IndexedDB |
 | Animations | Framer Motion |
-| IA | Claude, OpenAI, OpenRouter, Ollama, Custom |
+| AI providers | Claude, OpenAI, OpenRouter, Ollama, Custom |
 
-## Licence
+## License
 
-L'application WebClaw est gratuite (propriétaire — free to use). Les **skills** de ce dépôt sont partagés sous licence MIT pour un usage communautaire libre.
+The WebClaw application is free to use (proprietary). **Skills** in this repository are shared under the MIT license for free community use.
 
 ---
 
 <p align="center">
-  Fait avec soin par <a href="https://github.com/YourNakama"><strong>NakamaCyber</strong></a><br/>
-  <a href="./documentation/">Documentation</a> · <a href="https://ko-fi.com/nakamacyber">Soutenir</a> · <a href="https://github.com/YourNakama/WebClaw/issues">Signaler un bug</a>
+  <a href="https://webclaw.nakamacyber.ai"><strong>Try WebClaw</strong></a> · <a href="./documentation/">Documentation</a> · <a href="https://ko-fi.com/nakamacyber">Support</a> · <a href="https://github.com/YourNakama/WebClaw/issues">Report a bug</a>
+  <br/><br/>
+  Built with care by <a href="https://github.com/YourNakama"><strong>NakamaCyber</strong></a>
 </p>
