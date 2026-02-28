@@ -68,16 +68,28 @@ If you already have a GitHub repo with Markdown files:
 
 Your vault opens with:
 
-- **File tree** on the left — navigate, create folders and files
-- **Markdown editor** in the center — write with syntax highlighting and autocomplete
-- **Live preview** on the right — see your Markdown rendered in real time (Mermaid diagrams, tables, code)
-- **Toolbar** at the top — view mode toggle (Code / Split / Preview), new file, save, settings
+- **Dashboard** in the center — when no file is open, you see a dashboard with recent files, favorites, task progress, tag cloud, and quick actions
+- **File tree** on the left — navigate, create folders and files. Click a **folder name** to open a database view (table of all files with sortable/filterable columns from frontmatter)
+- **Markdown editor** in the center — write with syntax highlighting, slash commands (`/table`, `/callout`, `/toggle`…), and a floating toolbar (select text → Bold, Italic, Code, Link)
+- **Live preview** on the right — see your Markdown rendered in real time with rich blocks (callout blockquotes, collapsible toggles, Mermaid diagrams, tables, code)
+- **Task Panel** on the right — click the checkmark icon to see all tasks across your vault, grouped by file, with tabs (All / Open / Done). Click checkboxes in the preview to toggle them
+- **Toolbar** at the top — view mode toggle (Code / Split / Preview), new file (with template picker), save, task panel, graph view, focus mode, settings
 - **View mode toggle** centered in the toolbar:
   - **Code** — full-width editor
   - **Split** — editor + live preview side by side
   - **Preview** — rendered Markdown only
 
 Every save automatically creates a commit in your GitHub repo. Your full history is preserved.
+
+### Quick tips
+
+- Type `/` in the editor for slash commands: `/callout`, `/toggle`, `/checklist`, `/mermaid`, `/table`, `/frontmatter`, and more
+- Select text in the editor to see a floating toolbar for one-click formatting (Bold, Italic, Strikethrough, Code, Link)
+- Write `- [ ] My task` in any file to create trackable tasks visible in the Task Panel
+- Use `> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`, `> [!CAUTION]`, `> [!IMPORTANT]` for colored callout blocks
+- Use `<details><summary>Click</summary>Content</details>` for collapsible toggles
+- Press `Ctrl+N` to create a new file from a template (Meeting Notes, Todo List, Journal, etc.)
+- Add a `.templates/` folder to your repo for custom templates
 
 ## Step 5 (optional) — Connect an AI
 

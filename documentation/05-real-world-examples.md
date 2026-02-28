@@ -264,6 +264,157 @@ End with a risk matrix and a prioritized remediation plan.
 
 ---
 
+## 8. Project management with tasks and database view
+
+**Context:** You manage a project with multiple deliverables and want to track progress across your vault.
+
+### Steps
+
+#### Phase 1 — Set up task tracking
+
+Create files with Markdown checkboxes to track deliverables:
+
+```markdown
+---
+type: project
+status: in-progress
+priority: high
+tags: [client-acme, q1-2026]
+---
+
+# Project ACME — Deliverables
+
+- [ ] Architecture document
+- [ ] API specification
+- [x] Kickoff meeting notes
+- [ ] Security audit report
+- [ ] Final presentation
+```
+
+#### Phase 2 — Use the Task Panel
+
+Click the **checkmark icon** in the toolbar to open the Task Panel. You'll see all tasks across your vault:
+- Filter by **Open** / **Done** tabs
+- Search tasks by text or filename
+- Click a task to jump to the file
+- Click the checkbox to toggle it — the source file and GitHub are updated instantly
+
+#### Phase 3 — Use the Database View
+
+Click the **project folder name** in the file tree. A table appears with all files in the folder:
+- Columns are auto-detected from frontmatter (`status`, `priority`, `tags`, etc.)
+- Click a column header to sort
+- Use the search bar to filter
+- Double-click a cell to edit inline — changes save to GitHub
+
+This gives you a Notion-like database view of your project files, powered by your YAML frontmatter.
+
+---
+
+## 9. Using templates for recurring documents
+
+**Context:** You create meeting notes every week with the same structure.
+
+### Steps
+
+#### Phase 1 — Create a custom template
+
+Add a `.templates/` folder to your repo root with a file like `weekly-standup.md`:
+
+```markdown
+---
+type: meeting
+date: {{date}}
+participants: []
+tags: [standup, weekly]
+---
+
+# Weekly Standup — {{date}}
+
+## Updates
+
+### Team member 1
+-
+
+### Team member 2
+-
+
+## Blockers
+
+-
+
+## Action Items
+
+- [ ]
+- [ ]
+
+## Next Meeting
+
+-
+```
+
+#### Phase 2 — Use the template
+
+1. Press `Ctrl+N` (or click the `+` button)
+2. The **Template Picker** opens — you'll see your custom template under "Custom"
+3. Hover to preview the content
+4. Click it, name the file (e.g. `meetings/2026-02-28-standup.md`)
+5. The file is created with `{{date}}` replaced by today's date
+
+---
+
+## 10. Rich documentation with callouts and toggles
+
+**Context:** You're writing a technical guide and want to highlight important information clearly.
+
+### Using callouts
+
+In your Markdown file, write:
+
+```markdown
+> [!NOTE]
+> This API requires authentication. See the auth guide for setup.
+
+> [!WARNING]
+> Rate limiting is enforced at 100 requests/minute. Exceeding this will result in a 429 response.
+
+> [!TIP]
+> Use the `/v2/batch` endpoint to reduce the number of API calls.
+```
+
+In the preview, these render as colored blocks with icons — blue for NOTE, amber for WARNING, green for TIP.
+
+### Using collapsible toggles
+
+For long content that doesn't need to be visible by default:
+
+```markdown
+<details>
+<summary>Full error response schema</summary>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| code | number | HTTP status code |
+| message | string | Human-readable error |
+| details | object | Machine-readable context |
+
+</details>
+```
+
+The content is hidden by default and expands on click.
+
+### Using slash commands
+
+Instead of memorizing the syntax, type `/` in the editor:
+- `/callout` → inserts a NOTE callout
+- `/warning` → inserts a WARNING callout
+- `/tip` → inserts a TIP callout
+- `/toggle` → inserts a collapsible block
+- `/checklist` → inserts task checkboxes
+- `/mermaid` → inserts a diagram template
+
+---
+
 ## Tips for better results
 
 1. **Be specific** — The more detail in your prompt, the better the output. Include context, audience, and desired format.

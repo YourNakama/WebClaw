@@ -42,6 +42,9 @@
 - Turn an 80-page RFP into a structured summary + response plan in 10 minutes
 - Generate a 30-page technical guide with diagrams, code examples, and a human voice
 - Convert raw meeting notes into a professional report with decisions and action items
+- Track tasks across your entire vault and check them off directly in the preview
+- Browse your folders as sortable databases with inline editing — like Notion, but on GitHub
+- Create documents from templates with auto-resolved variables (`{{date}}`, `{{title}}`)
 - Organize months of scattered documents into a searchable knowledge base
 
 **...all from a browser tab. No install. Your data stays yours.**
@@ -247,7 +250,7 @@ Step-by-step guides to get the most out of [webclaw.nakamacyber.ai](https://webc
 | [Authentication & security](./documentation/02-authentication.md) | How sign-in works and why it's secure |
 | [Connect your AI](./documentation/03-connect-your-ai.md) | Set up Claude, OpenAI, OpenRouter, Ollama, or a custom endpoint |
 | [Install & use skills](./documentation/04-install-use-skills.md) | Browse the hub, install, enable, and use skills |
-| [Real-world examples](./documentation/05-real-world-examples.md) | Detailed walkthroughs: RFPs, tech guides, reports, knowledge bases |
+| [Real-world examples](./documentation/05-real-world-examples.md) | Detailed walkthroughs: RFPs, tech guides, reports, task tracking, templates, callouts |
 | [Create a skill](./documentation/06-creating-a-skill.md) | Full spec to contribute your own skills to the community |
 
 ---
@@ -297,6 +300,16 @@ WebClaw/
 | **Audit Report** | Audit report with risk matrix and recommendations |
 | **Onboarding Guide** | Welcome guide for new team members |
 | **Changelog Writer** | Automated CHANGELOG.md maintenance |
+
+### Recently shipped
+
+- **Dashboard** — Widget-based home screen with recent files, favorites, task progress, tag cloud, and file type stats
+- **Task Tracking** — Cross-vault task aggregation with a dedicated panel, interactive preview checkboxes, and real-time GitHub sync
+- **Database View** — Click a folder to see its files as a sortable, filterable table with auto-detected frontmatter columns and inline editing
+- **Rich Blocks** — GitHub-style callout blockquotes (`> [!NOTE]`, `[!TIP]`, `[!WARNING]`, `[!CAUTION]`, `[!IMPORTANT]`) with colored rendering and icons. Collapsible toggle blocks via `<details>/<summary>`
+- **Slash Commands** — `/callout`, `/warning`, `/tip`, `/toggle`, `/toc`, `/tag` and more for quick Markdown insertion
+- **Floating Toolbar** — Select text in the editor to get one-click Bold, Italic, Strikethrough, Code, and Link formatting
+- **Page Templates** — Template picker on new file with built-in and custom templates (from `.templates/` folder), with variable resolution (`{{date}}`, `{{title}}`, `{{author}}`)
 
 ### App improvements
 
@@ -354,8 +367,8 @@ Ko-fi takes **0% commission** — 100% goes to the developer. Your donations fun
 | Framework | Next.js 16 (App Router) |
 | UI | React 19 + Tailwind CSS 4 + shadcn/ui |
 | Auth | GitHub OAuth + CSRF |
-| Editor | CodeMirror 6 |
-| Preview | marked.js + DOMPurify |
+| Editor | CodeMirror 6 + slash commands + floating toolbar |
+| Preview | marked.js + callout extension + DOMPurify |
 | Diagrams | Mermaid |
 | File backend | GitHub Contents API via Octokit |
 | Encryption | WebCrypto AES-256-GCM + IndexedDB |
