@@ -6,10 +6,10 @@ WebClaw includes an AI assistant that can read, create, edit, and organize your 
 
 | Provider | Popular models | What you need |
 |----------|---------------|---------------|
-| **Anthropic (Claude)** | Claude Opus 4, Sonnet 4, Haiku 4.5 | API key **or** OAuth via Claude Code |
-| **OpenAI** | GPT-4o, GPT-4.1, o3, o4-mini | API key (pay-per-use) |
-| **OpenRouter** | 200+ models (Claude, GPT, Llama, Mistral…) | OpenRouter API key |
-| **Ollama** | Llama 3.2, Mistral, DeepSeek R1, Qwen 2.5 | Ollama installed + CORS enabled (free) |
+| **Anthropic (Claude)** | Claude Opus 4.6, Sonnet 4.6, Haiku 4.5 | API key **or** OAuth via Claude Code |
+| **OpenAI** | GPT-5.2, GPT-5.1, o3, o4-mini | API key (pay-per-use) |
+| **OpenRouter** | 200+ models (Claude, GPT, Llama, Mistral, Gemini…) | OpenRouter API key |
+| **Ollama** | Llama 3.3, DeepSeek R1, Qwen 3, Mistral | Ollama installed + CORS enabled (free) |
 | **Custom** | Any OpenAI-compatible API | Endpoint URL + optional API key |
 
 ## Setup step by step
@@ -59,7 +59,7 @@ Use your **Claude Pro / Max subscription** instead of a pay-per-use API key.
 2. Click **Create new secret key**, give it a name
 3. Copy the key (starts with `sk-...`)
 4. Paste it in the **API key** field in WebClaw
-5. Pick a model from the dropdown (recommended: **GPT-4o**)
+5. Pick a model from the dropdown (recommended: **GPT-5.2**)
 
 > **Note:** OpenAI requires a pay-per-use API key. Unlike Claude, ChatGPT/Codex subscriptions cannot be used with third-party apps — their OAuth tokens are restricted to the Codex CLI. If you want to avoid per-token billing, consider **OpenRouter** which gives you access to OpenAI models (and 200+ others) with flexible pricing.
 
@@ -71,7 +71,7 @@ Use your **Claude Pro / Max subscription** instead of a pay-per-use API key.
 2. Paste it in the **API key** field
 3. Pick from 200+ available models
 
-OpenRouter is great: one account gives you access to Claude, GPT-4, Llama, Mistral, Gemini, and more. Perfect for comparing models or accessing specialized ones.
+OpenRouter is great: one account gives you access to Claude, GPT-5, Llama, Mistral, Gemini, and more. Perfect for comparing models or accessing specialized ones.
 
 ---
 
@@ -191,7 +191,7 @@ In Settings → AI Assistant, you can add a **custom system prompt** injected in
 Absolutely. AI is optional. WebClaw works great as a Markdown editor with GitHub sync, preview, print, and search — no AI required.
 
 **Which model do you recommend?**
-For professional document work, **Claude Sonnet 4.6** offers the best quality/cost ratio. For free, **Ollama with Llama 3.2** or **DeepSeek R1** are excellent.
+For professional document work, **Claude Sonnet 4.6** offers the best quality/cost ratio. For maximum capability, **Claude Opus 4.6** or **GPT-5.2**. For free and local, **Ollama with Llama 3.3**, **DeepSeek R1**, or **Qwen 3** are excellent.
 
 **Can I switch AI providers at any time?**
 Yes. Settings → change provider and model → Save. The next conversation uses the new config instantly.

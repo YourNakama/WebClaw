@@ -221,13 +221,13 @@ Server (minimal)
 
 WebClaw doesn't lock you into a model. You choose, you pay (or don't), you switch whenever you want.
 
-| Provider | What you need | Cost |
-|----------|--------------|------|
-| **Claude** (Anthropic) | API key **or** OAuth via Claude Code | Pay-per-use or Pro/Max subscription |
-| **OpenAI** (GPT-4o, o3, o4) | API key | Pay-per-use |
-| **OpenRouter** | API key (access to 200+ models) | Pay-per-use |
-| **Ollama** | Installed on your machine + CORS enabled | **Free, 100% local** |
-| **Custom** | Any OpenAI-compatible API (LM Studio, vLLM, etc.) | Varies |
+| Provider | Popular models | What you need | Cost |
+|----------|---------------|--------------|------|
+| **Claude** (Anthropic) | Opus 4.6, Sonnet 4.6, Haiku 4.5 | API key **or** OAuth via Claude Code | Pay-per-use or Pro/Max subscription |
+| **OpenAI** | GPT-5.2, GPT-5.1, o3, o4-mini | API key | Pay-per-use |
+| **OpenRouter** | 200+ models (Claude, GPT, Llama, Gemini…) | API key | Pay-per-use |
+| **Ollama** | Llama 3.3, DeepSeek R1, Qwen 3, Mistral | Installed on your machine + CORS enabled | **Free, 100% local** |
+| **Custom** | Any OpenAI-compatible API | Endpoint URL + optional API key | Varies |
 
 With **Ollama**, no data leaves your machine. Zero cost, zero tracking, zero cloud dependency. WebClaw connects directly from your browser — the server is never involved.
 
