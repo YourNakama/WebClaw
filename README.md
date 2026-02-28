@@ -58,7 +58,7 @@ That's [**WebClaw**](https://webclaw.nakamacyber.ai).
 1. Go to webclaw.nakamacyber.ai
 2. Sign in with GitHub (one click)
 3. Create or connect a vault (= a GitHub repo for your documents)
-4. Plug in your AI in Settings (Claude, OpenAI, Ollama… your choice)
+4. Plug in your AI in Settings → AI Assistant (Claude, OpenAI, Ollama… your choice)
 5. Install skills from the community hub
 6. Work.
 ```
@@ -223,15 +223,15 @@ WebClaw doesn't lock you into a model. You choose, you pay (or don't), you switc
 
 | Provider | What you need | Cost |
 |----------|--------------|------|
-| **Claude** (Anthropic) | API key | Pay-per-use |
-| **OpenAI** (GPT-4o) | API key | Pay-per-use |
+| **Claude** (Anthropic) | API key **or** OAuth via Claude Code | Pay-per-use or Pro/Max subscription |
+| **OpenAI** (GPT-4o, o3, o4) | API key | Pay-per-use |
 | **OpenRouter** | API key (access to 200+ models) | Pay-per-use |
-| **Ollama** | Installed on your machine | **Free, 100% local** |
-| **Custom** | Any OpenAI-compatible API | Varies |
+| **Ollama** | Installed on your machine + CORS enabled | **Free, 100% local** |
+| **Custom** | Any OpenAI-compatible API (LM Studio, vLLM, etc.) | Varies |
 
-With **Ollama**, no data leaves your machine. Zero cost, zero tracking, zero cloud dependency.
+With **Ollama**, no data leaves your machine. Zero cost, zero tracking, zero cloud dependency. WebClaw connects directly from your browser — the server is never involved.
 
-Setup: Settings > General > pick provider > enter key > Save. 30 seconds.
+Setup: ⚙ Settings > AI Assistant > pick provider > follow guided steps > Test > Save. 30 seconds.
 
 Full guide: **[Connect your AI](./documentation/03-connect-your-ai.md)**
 
