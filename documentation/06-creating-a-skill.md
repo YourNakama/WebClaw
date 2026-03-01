@@ -271,4 +271,4 @@ Your skill will be rejected if:
 
 ---
 
-**Back** → [README](../README.md)
+**Next** → [Mobile, PWA & offline](./07-mobile-and-offline.md) | **Back** → [README](../README.md)

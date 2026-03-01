@@ -68,6 +68,8 @@ That's [**WebClaw**](https://webclaw.nakamacyber.ai).
 
 No terminal. No Docker. No `npm install`. No subscription. A browser and a GitHub account — that's it.
 
+> **No GitHub account?** Click **Try Without Account** on the landing page to explore a demo vault instantly.
+
 Full walkthrough: **[Getting started](./documentation/01-getting-started.md)**
 
 ---
@@ -252,6 +254,7 @@ Step-by-step guides to get the most out of [webclaw.nakamacyber.ai](https://webc
 | [Install & use skills](./documentation/04-install-use-skills.md) | Browse the hub, install, enable, and use skills |
 | [Real-world examples](./documentation/05-real-world-examples.md) | Detailed walkthroughs: RFPs, tech guides, reports, task tracking, templates, callouts |
 | [Create a skill](./documentation/06-creating-a-skill.md) | Full spec to contribute your own skills to the community |
+| [Mobile, PWA & offline](./documentation/07-mobile-and-offline.md) | Mobile layout, install as app, offline reading, Quick Switcher, demo mode |
 
 ---
 
@@ -275,7 +278,8 @@ WebClaw/
 │   ├── 03-connect-your-ai.md
 │   ├── 04-install-use-skills.md
 │   ├── 05-real-world-examples.md
-│   └── 06-creating-a-skill.md
+│   ├── 06-creating-a-skill.md
+│   └── 07-mobile-and-offline.md
 ├── doc-writer/                "Doc Writer" skill
 │   ├── skill.json
 │   └── prompt.md
@@ -303,6 +307,10 @@ WebClaw/
 
 ### Recently shipped
 
+- **Quick Switcher (Cmd+P)** — Fuzzy file search overlay, instant navigation across your vault. Shows recent files when empty, ranked fuzzy matches when typing
+- **Demo Mode** — Try WebClaw without a GitHub account. Click "Try Without Account" on the landing page to explore a sample vault with realistic files and tasks
+- **Mobile Responsive** — Full mobile layout with bottom navigation bar, slide-over file sidebar, AI bottom sheet, and simplified toolbar
+- **PWA & Offline** — Install WebClaw on your device. Previously opened files are cached for offline reading. Service worker for app shell caching
 - **Dashboard** — Widget-based home screen with recent files, favorites, task progress, tag cloud, and file type stats
 - **Task Tracking** — Cross-vault task aggregation with a dedicated panel, interactive preview checkboxes, and real-time GitHub sync
 - **Database View** — Click a folder to see its files as a sortable, filterable table with auto-detected frontmatter columns and inline editing
@@ -372,6 +380,7 @@ Ko-fi takes **0% commission** — 100% goes to the developer. Your donations fun
 | Diagrams | Mermaid |
 | File backend | GitHub Contents API via Octokit |
 | Encryption | WebCrypto AES-256-GCM + IndexedDB |
+| PWA / Offline | Serwist (service worker) + idb-keyval (IndexedDB cache) |
 | Animations | Framer Motion |
 | AI providers | Claude, OpenAI, OpenRouter, Ollama, Custom |
 

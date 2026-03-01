@@ -9,6 +9,8 @@ Start using WebClaw in 2 minutes. Nothing to install.
 
 That's it. No terminal, no downloads, no technical setup.
 
+> **Want to try first?** You can explore WebClaw without an account. Click **Try Without Account** on the landing page to enter demo mode with sample files. You can browse, preview, and test every feature — connect GitHub later when you're ready to save your work.
+
 ## Step 1 — Open WebClaw
 
 Go to **[webclaw.nakamacyber.ai](https://webclaw.nakamacyber.ai)** in your browser. You'll see the landing page.
@@ -83,6 +85,7 @@ Every save automatically creates a commit in your GitHub repo. Your full history
 
 ### Quick tips
 
+- Press `Cmd+P` (or `Ctrl+P`) to open the **Quick Switcher** — fuzzy search your files by name, instant navigation
 - Type `/` in the editor for slash commands: `/callout`, `/toggle`, `/checklist`, `/mermaid`, `/table`, `/frontmatter`, and more
 - Select text in the editor to see a floating toolbar for one-click formatting (Bold, Italic, Strikethrough, Code, Link)
 - Write `- [ ] My task` in any file to create trackable tasks visible in the Task Panel
@@ -90,6 +93,7 @@ Every save automatically creates a commit in your GitHub repo. Your full history
 - Use `<details><summary>Click</summary>Content</details>` for collapsible toggles
 - Press `Ctrl+N` to create a new file from a template (Meeting Notes, Todo List, Journal, etc.)
 - Add a `.templates/` folder to your repo for custom templates
+- **On mobile**, WebClaw adapts with a bottom navigation bar, swipeable sidebar, and AI bottom sheet — see [Mobile & offline](./07-mobile-and-offline.md)
 
 ## Step 5 (optional) — Connect an AI
 
@@ -139,8 +143,17 @@ Full guide: [Install & use skills](./04-install-use-skills.md)
 **Is WebClaw free?**
 Yes. WebClaw is donationware — all features are free for everyone. If it helps you, you can choose to support the project via [Ko-fi](https://ko-fi.com/nakamacyber).
 
+**Can I try without creating an account?**
+Yes. Click **Try Without Account** on the landing page. You'll enter demo mode with sample files that showcase every feature. Nothing is saved — connect GitHub when you're ready.
+
 **Does my data pass through your servers?**
 No. Your documents live in your own GitHub repo. Communication happens directly between your browser and the GitHub API. Our server only handles the OAuth handshake.
+
+**Can I use WebClaw on my phone?**
+Yes. WebClaw is a Progressive Web App (PWA). On mobile you get a bottom navigation bar, a swipeable file sidebar, and the AI assistant as a bottom sheet. You can also install it on your home screen for an app-like experience. See [Mobile & offline](./07-mobile-and-offline.md).
+
+**Does WebClaw work offline?**
+Partially. Once you've opened files, they're cached locally. If you lose connection, you can still read cached files. Editing and saving require a connection. See [Mobile & offline](./07-mobile-and-offline.md).
 
 **Can I use WebClaw without AI?**
 Absolutely. WebClaw is a great Markdown editor with GitHub sync, live preview, print, and file management — even without AI.
@@ -153,4 +166,4 @@ Nothing. Your files are in your GitHub repo. You can read, edit, and manage them
 
 ---
 
-**Next** → [Authentication & security](./02-authentication.md)
+**Next** → [Authentication & security](./02-authentication.md) | [Mobile & offline](./07-mobile-and-offline.md)
