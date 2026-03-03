@@ -25933,7 +25933,7 @@ async function getFileHistory(octokit, owner, repo, path, perPage = 30) {
 
 // dist/auth.js
 import { exec } from "child_process";
-var GITHUB_CLIENT_ID = "Ov23ctlK0eSRxyelzeNs";
+var GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23ctlK0eSRxyelzeNs";
 async function requestDeviceCode() {
   const res = await fetch("https://github.com/login/device/code", {
     method: "POST",
@@ -26754,7 +26754,7 @@ function setCorsHeaders(res) {
 function createSession() {
   const mcpServer = new McpServer({
     name: "webclaw",
-    version: "1.3.1"
+    version: "1.3.2"
   });
   const sessionState = { config: null, octokit: null };
   registerTools(mcpServer, () => sessionState, (patch) => {
@@ -26787,7 +26787,7 @@ var httpServer = createServer(async (req, res) => {
     res.end(JSON.stringify({
       status: "ok",
       server: "webclaw-mcp",
-      version: "1.3.1",
+      version: "1.3.2",
       sessions: sessions.size
     }));
     return;
@@ -26814,7 +26814,7 @@ var httpServer = createServer(async (req, res) => {
 });
 var PORT = parseInt(process.env.PORT || "3000", 10);
 httpServer.listen(PORT, () => {
-  console.log(`WebClaw MCP remote server v1.3.1 listening on port ${PORT}`);
+  console.log(`WebClaw MCP remote server v1.3.2 listening on port ${PORT}`);
   console.log(`  MCP endpoint: http://localhost:${PORT}/mcp`);
   console.log(`  Health check: http://localhost:${PORT}/health`);
 });

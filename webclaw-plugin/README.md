@@ -6,7 +6,7 @@
 
 **Turn any GitHub repo into an organized markdown vault, directly from Claude.**
 
-Browse, read, write, search, and manage tasks across your files — every change is committed to GitHub. Works with **Claude Code** (terminal) and **Claude Cowork** (desktop). Pair with [WebClaw](https://webclaw.nakamacyber.ai) for the full visual experience.
+Browse, read, write, search, and manage tasks across your files — every change is committed to GitHub. Works with **Claude Code** (terminal), **Claude Cowork** (desktop), and **Claude.ai** (web). Pair with [WebClaw](https://webclaw.nakamacyber.ai) for the full visual experience.
 
 ---
 
@@ -28,6 +28,22 @@ The plugin is pre-built and ready to use — no terminal, no build step.
 3. Click **+** → **Add marketplace from GitHub**
 4. Enter `YourNakama/WebClaw`
 5. Install `webclaw` from the list
+
+### Remote server (Claude.ai / Cowork sans plugin local)
+
+WebClaw est aussi disponible en tant que **serveur MCP distant**, deployé sur Railway. Le code deployé est exactement celui de ce repo public — vérifiable et auditable par tous.
+
+**Claude Code :**
+```bash
+claude mcp add --transport http webclaw https://webclaw-production-755c.up.railway.app/mcp
+```
+
+**Claude.ai / Cowork :** ajouter via l'interface des connecteurs MCP distants avec l'URL :
+```
+https://webclaw-production-755c.up.railway.app/mcp
+```
+
+Le flow d'authentification est le meme (OAuth Device Flow) — Claude vous guidera pour connecter votre GitHub.
 
 ### First use — connect your vault
 
@@ -137,32 +153,79 @@ Claude: 🚀 Initialized vault with 10 starter files
 
 ## How it works
 
+**Mode local (stdio) — Claude Code / plugin local :**
+
 ```
 ┌─────────────────────┐     ┌──────────────┐     ┌────────────┐
 │  Claude Code / CLI  │     │   WebClaw    │     │   GitHub   │
-│  Claude Cowork/GUI  │────▶│  MCP Server  │────▶│  API       │
-│  (you talk here)    │ MCP │  (this plugin)│     │  (your repo)│
+│  Claude Cowork/GUI  │────▶│  MCP Server  │────▶│    API     │
+│  (you talk here)    │stdio│  (this plugin)│     │ (your repo)│
 └─────────────────────┘     └──────────────┘     └────────────┘
                                    │
                             ~/.webclaw/config.json
                             (token, owner, repo, branch)
 ```
 
+**Mode remote (HTTP) — Claude.ai / Cowork / tout client MCP :**
+
+```
+┌─────────────────────┐     ┌──────────────────┐     ┌────────────┐
+│  Claude.ai          │     │   WebClaw MCP    │     │   GitHub   │
+│  Claude Cowork      │────▶│   Remote Server  │────▶│    API     │
+│  Claude Code        │HTTPS│   (Railway)      │     │ (your repo)│
+└─────────────────────┘     └──────────────────┘     └────────────┘
+                                     │
+                              Tokens en memoire
+                              (session ephemere)
+```
+
 - **Your vault** = a GitHub repo with markdown files
 - **This plugin** = an MCP server that reads/writes via the GitHub API
 - **WebClaw** = the browser app for the same vault (visual editing, Dashboard, Task Panel)
+- **Mode local** : le serveur tourne sur votre machine, token stocke en local
+- **Mode remote** : le serveur tourne sur Railway, chaque utilisateur = une session en memoire
 
-Same repo, same files, same GitHub history — terminal or browser, your choice.
+Same repo, same files, same GitHub history — terminal, browser, or remote, your choice.
 
 ---
 
 ## Security
 
 - **OAuth Device Flow** — authenticate via browser, no token to copy-paste or store in env vars
-- Token stored locally in `~/.webclaw/config.json` (chmod 600) — never sent anywhere except GitHub API
-- No telemetry, no analytics, no server-side processing
+- **Mode local** : token stocke dans `~/.webclaw/config.json` (chmod 600) — jamais envoye ailleurs que l'API GitHub
+- **Mode remote** : tokens en memoire cote serveur uniquement, jamais persistes sur disque. Un restart du serveur efface toutes les sessions
+- No telemetry, no analytics
 - Every write operation creates a GitHub commit — full audit trail
-- The MCP server runs on your machine via stdio — no network server exposed
+- **Code public = code deploye** : le serveur MCP distant deploye sur Railway utilise exactement le code de ce repo public. Pas de build prive, pas de code cache. Tout est verifiable et auditable par n'importe qui
+- **Client ID public** : le `GITHUB_CLIENT_ID` est visible dans le code source (meme pattern que le CLI `gh` de GitHub). Ce n'est pas un secret — la securite repose sur l'autorisation explicite de l'utilisateur dans son navigateur
+- HTTPS fourni automatiquement par Railway (TLS)
+
+---
+
+## Self-hosting (Railway)
+
+Vous pouvez deployer votre propre instance du serveur MCP distant. Le Dockerfile est inclus dans le repo.
+
+**Deploy sur Railway :**
+
+1. Creer un nouveau service depuis le repo GitHub `YourNakama/WebClaw`
+2. Dans **Settings** du service :
+   - **Root Directory** : `webclaw-plugin`
+   - **Builder** : `Dockerfile` (pas Railpack)
+3. Variables d'environnement (optionnel) :
+   - `GITHUB_CLIENT_ID` — pour utiliser votre propre OAuth App GitHub
+   - `PORT` — fourni automatiquement par Railway
+4. Deploy — Railway build et deploie automatiquement a chaque push
+
+Le Dockerfile utilise un **multi-stage build** : compilation TypeScript + bundling esbuild dans un premier stage, puis une image finale ultra-legere (Node Alpine + un seul fichier `remote.mjs`).
+
+```bash
+# Tester en local
+cd webclaw-plugin/server
+npm install && npm run build
+npm run start:remote
+# → http://localhost:3000/mcp
+```
 
 ---
 
