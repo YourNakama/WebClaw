@@ -1,3 +1,5 @@
+import type { Octokit } from "@octokit/rest";
+
 // === GitHub Types ===
 
 export interface GitHubFile {
@@ -96,3 +98,11 @@ export interface TaskItem {
   completed: boolean;
   tags: string[];
 }
+
+// === Session State (shared between stdio and remote) ===
+
+export interface SessionState {
+  config: VaultConfig | null;
+  octokit: Octokit | null;
+}
+

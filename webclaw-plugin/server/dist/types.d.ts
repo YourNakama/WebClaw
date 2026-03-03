@@ -1,3 +1,4 @@
+import type { Octokit } from "@octokit/rest";
 export interface GitHubFile {
     name: string;
     path: string;
@@ -77,4 +78,8 @@ export interface TaskItem {
     text: string;
     completed: boolean;
     tags: string[];
+}
+export interface SessionState {
+    config: VaultConfig | null;
+    octokit: Octokit | null;
 }

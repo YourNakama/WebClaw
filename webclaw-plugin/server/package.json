@@ -8,10 +8,12 @@
     "webclaw-mcp": "dist/bundle.mjs"
   },
   "scripts": {
-    "build": "tsc && npm run bundle",
+    "build": "tsc && npm run bundle && npm run bundle:remote",
     "bundle": "esbuild dist/index.js --bundle --platform=node --target=node20 --format=esm --outfile=dist/bundle.mjs",
+    "bundle:remote": "esbuild dist/remote.js --bundle --platform=node --target=node20 --format=esm --outfile=dist/remote.mjs",
     "dev": "tsc --watch",
-    "start": "node dist/bundle.mjs"
+    "start": "node dist/bundle.mjs",
+    "start:remote": "node dist/remote.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",

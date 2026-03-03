@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -4147,8 +4146,8 @@ var require_core = __commonJS({
             return this;
           }
           case "object": {
-            const cacheKey = schemaKeyRef;
-            this._cache.delete(cacheKey);
+            const cacheKey2 = schemaKeyRef;
+            this._cache.delete(cacheKey2);
             let id = schemaKeyRef[this.opts.schemaId];
             if (id) {
               id = (0, resolve_1.normalizeId)(id);
@@ -15625,6 +15624,7 @@ config(en_default2());
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
+var DEFAULT_NEGOTIATED_PROTOCOL_VERSION = "2025-03-26";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
 var JSONRPC_VERSION = "2.0";
@@ -15950,6 +15950,7 @@ var InitializeRequestSchema = RequestSchema.extend({
   method: literal("initialize"),
   params: InitializeRequestParamsSchema
 });
+var isInitializeRequest = (value) => InitializeRequestSchema.safeParse(value).success;
 var ServerCapabilitiesSchema = object2({
   /**
    * Experimental, non-standard capabilities that the server supports.
@@ -18379,13 +18380,13 @@ var zodToJsonSchema = (schema, options) => {
     }, true) ?? parseAnyDef(refs)
   }), {}) : void 0;
   const name = typeof options === "string" ? options : options?.nameStrategy === "title" ? void 0 : options?.name;
-  const main2 = parseDef(schema._def, name === void 0 ? refs : {
+  const main = parseDef(schema._def, name === void 0 ? refs : {
     ...refs,
     currentPath: [...refs.basePath, refs.definitionPath, name]
   }, false) ?? parseAnyDef(refs);
   const title = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
   if (title !== void 0) {
-    main2.title = title;
+    main.title = title;
   }
   if (refs.flags.hasReferencedOpenAiAnyType) {
     if (!definitions) {
@@ -18406,9 +18407,9 @@ var zodToJsonSchema = (schema, options) => {
     }
   }
   const combined = name === void 0 ? definitions ? {
-    ...main2,
+    ...main,
     [refs.definitionPath]: definitions
-  } : main2 : {
+  } : main : {
     $ref: [
       ...refs.$refStrategy === "relative" ? [] : refs.basePath,
       refs.definitionPath,
@@ -18416,7 +18417,7 @@ var zodToJsonSchema = (schema, options) => {
     ].join("/"),
     [refs.definitionPath]: {
       ...definitions,
-      [name]: main2
+      [name]: main
     }
   };
   if (refs.target === "jsonSchema7") {
@@ -20989,100 +20990,1247 @@ var EMPTY_COMPLETION_RESULT = {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
-import process2 from "node:process";
-
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
-var ReadBuffer = class {
-  append(chunk) {
-    this._buffer = this._buffer ? Buffer.concat([this._buffer, chunk]) : chunk;
-  }
-  readMessage() {
-    if (!this._buffer) {
-      return null;
-    }
-    const index = this._buffer.indexOf("\n");
-    if (index === -1) {
-      return null;
-    }
-    const line = this._buffer.toString("utf8", 0, index).replace(/\r$/, "");
-    this._buffer = this._buffer.subarray(index + 1);
-    return deserializeMessage(line);
-  }
-  clear() {
-    this._buffer = void 0;
+// node_modules/@hono/node-server/dist/index.mjs
+import { Http2ServerRequest as Http2ServerRequest2 } from "http2";
+import { Http2ServerRequest } from "http2";
+import { Readable } from "stream";
+import crypto2 from "crypto";
+var RequestError = class extends Error {
+  constructor(message, options) {
+    super(message, options);
+    this.name = "RequestError";
   }
 };
-function deserializeMessage(line) {
-  return JSONRPCMessageSchema.parse(JSON.parse(line));
+var toRequestError = (e) => {
+  if (e instanceof RequestError) {
+    return e;
+  }
+  return new RequestError(e.message, { cause: e });
+};
+var GlobalRequest = global.Request;
+var Request = class extends GlobalRequest {
+  constructor(input, options) {
+    if (typeof input === "object" && getRequestCache in input) {
+      input = input[getRequestCache]();
+    }
+    if (typeof options?.body?.getReader !== "undefined") {
+      ;
+      options.duplex ??= "half";
+    }
+    super(input, options);
+  }
+};
+var newHeadersFromIncoming = (incoming) => {
+  const headerRecord = [];
+  const rawHeaders = incoming.rawHeaders;
+  for (let i = 0; i < rawHeaders.length; i += 2) {
+    const { [i]: key, [i + 1]: value } = rawHeaders;
+    if (key.charCodeAt(0) !== /*:*/
+    58) {
+      headerRecord.push([key, value]);
+    }
+  }
+  return new Headers(headerRecord);
+};
+var wrapBodyStream = /* @__PURE__ */ Symbol("wrapBodyStream");
+var newRequestFromIncoming = (method, url, headers, incoming, abortController) => {
+  const init = {
+    method,
+    headers,
+    signal: abortController.signal
+  };
+  if (method === "TRACE") {
+    init.method = "GET";
+    const req = new Request(url, init);
+    Object.defineProperty(req, "method", {
+      get() {
+        return "TRACE";
+      }
+    });
+    return req;
+  }
+  if (!(method === "GET" || method === "HEAD")) {
+    if ("rawBody" in incoming && incoming.rawBody instanceof Buffer) {
+      init.body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(incoming.rawBody);
+          controller.close();
+        }
+      });
+    } else if (incoming[wrapBodyStream]) {
+      let reader;
+      init.body = new ReadableStream({
+        async pull(controller) {
+          try {
+            reader ||= Readable.toWeb(incoming).getReader();
+            const { done, value } = await reader.read();
+            if (done) {
+              controller.close();
+            } else {
+              controller.enqueue(value);
+            }
+          } catch (error2) {
+            controller.error(error2);
+          }
+        }
+      });
+    } else {
+      init.body = Readable.toWeb(incoming);
+    }
+  }
+  return new Request(url, init);
+};
+var getRequestCache = /* @__PURE__ */ Symbol("getRequestCache");
+var requestCache = /* @__PURE__ */ Symbol("requestCache");
+var incomingKey = /* @__PURE__ */ Symbol("incomingKey");
+var urlKey = /* @__PURE__ */ Symbol("urlKey");
+var headersKey = /* @__PURE__ */ Symbol("headersKey");
+var abortControllerKey = /* @__PURE__ */ Symbol("abortControllerKey");
+var getAbortController = /* @__PURE__ */ Symbol("getAbortController");
+var requestPrototype = {
+  get method() {
+    return this[incomingKey].method || "GET";
+  },
+  get url() {
+    return this[urlKey];
+  },
+  get headers() {
+    return this[headersKey] ||= newHeadersFromIncoming(this[incomingKey]);
+  },
+  [getAbortController]() {
+    this[getRequestCache]();
+    return this[abortControllerKey];
+  },
+  [getRequestCache]() {
+    this[abortControllerKey] ||= new AbortController();
+    return this[requestCache] ||= newRequestFromIncoming(
+      this.method,
+      this[urlKey],
+      this.headers,
+      this[incomingKey],
+      this[abortControllerKey]
+    );
+  }
+};
+[
+  "body",
+  "bodyUsed",
+  "cache",
+  "credentials",
+  "destination",
+  "integrity",
+  "mode",
+  "redirect",
+  "referrer",
+  "referrerPolicy",
+  "signal",
+  "keepalive"
+].forEach((k) => {
+  Object.defineProperty(requestPrototype, k, {
+    get() {
+      return this[getRequestCache]()[k];
+    }
+  });
+});
+["arrayBuffer", "blob", "clone", "formData", "json", "text"].forEach((k) => {
+  Object.defineProperty(requestPrototype, k, {
+    value: function() {
+      return this[getRequestCache]()[k]();
+    }
+  });
+});
+Object.setPrototypeOf(requestPrototype, Request.prototype);
+var newRequest = (incoming, defaultHostname) => {
+  const req = Object.create(requestPrototype);
+  req[incomingKey] = incoming;
+  const incomingUrl = incoming.url || "";
+  if (incomingUrl[0] !== "/" && // short-circuit for performance. most requests are relative URL.
+  (incomingUrl.startsWith("http://") || incomingUrl.startsWith("https://"))) {
+    if (incoming instanceof Http2ServerRequest) {
+      throw new RequestError("Absolute URL for :path is not allowed in HTTP/2");
+    }
+    try {
+      const url2 = new URL(incomingUrl);
+      req[urlKey] = url2.href;
+    } catch (e) {
+      throw new RequestError("Invalid absolute URL", { cause: e });
+    }
+    return req;
+  }
+  const host = (incoming instanceof Http2ServerRequest ? incoming.authority : incoming.headers.host) || defaultHostname;
+  if (!host) {
+    throw new RequestError("Missing host header");
+  }
+  let scheme;
+  if (incoming instanceof Http2ServerRequest) {
+    scheme = incoming.scheme;
+    if (!(scheme === "http" || scheme === "https")) {
+      throw new RequestError("Unsupported scheme");
+    }
+  } else {
+    scheme = incoming.socket && incoming.socket.encrypted ? "https" : "http";
+  }
+  const url = new URL(`${scheme}://${host}${incomingUrl}`);
+  if (url.hostname.length !== host.length && url.hostname !== host.replace(/:\d+$/, "")) {
+    throw new RequestError("Invalid host header");
+  }
+  req[urlKey] = url.href;
+  return req;
+};
+var responseCache = /* @__PURE__ */ Symbol("responseCache");
+var getResponseCache = /* @__PURE__ */ Symbol("getResponseCache");
+var cacheKey = /* @__PURE__ */ Symbol("cache");
+var GlobalResponse = global.Response;
+var Response2 = class _Response {
+  #body;
+  #init;
+  [getResponseCache]() {
+    delete this[cacheKey];
+    return this[responseCache] ||= new GlobalResponse(this.#body, this.#init);
+  }
+  constructor(body, init) {
+    let headers;
+    this.#body = body;
+    if (init instanceof _Response) {
+      const cachedGlobalResponse = init[responseCache];
+      if (cachedGlobalResponse) {
+        this.#init = cachedGlobalResponse;
+        this[getResponseCache]();
+        return;
+      } else {
+        this.#init = init.#init;
+        headers = new Headers(init.#init.headers);
+      }
+    } else {
+      this.#init = init;
+    }
+    if (typeof body === "string" || typeof body?.getReader !== "undefined" || body instanceof Blob || body instanceof Uint8Array) {
+      headers ||= init?.headers || { "content-type": "text/plain; charset=UTF-8" };
+      this[cacheKey] = [init?.status || 200, body, headers];
+    }
+  }
+  get headers() {
+    const cache = this[cacheKey];
+    if (cache) {
+      if (!(cache[2] instanceof Headers)) {
+        cache[2] = new Headers(cache[2]);
+      }
+      return cache[2];
+    }
+    return this[getResponseCache]().headers;
+  }
+  get status() {
+    return this[cacheKey]?.[0] ?? this[getResponseCache]().status;
+  }
+  get ok() {
+    const status = this.status;
+    return status >= 200 && status < 300;
+  }
+};
+["body", "bodyUsed", "redirected", "statusText", "trailers", "type", "url"].forEach((k) => {
+  Object.defineProperty(Response2.prototype, k, {
+    get() {
+      return this[getResponseCache]()[k];
+    }
+  });
+});
+["arrayBuffer", "blob", "clone", "formData", "json", "text"].forEach((k) => {
+  Object.defineProperty(Response2.prototype, k, {
+    value: function() {
+      return this[getResponseCache]()[k]();
+    }
+  });
+});
+Object.setPrototypeOf(Response2, GlobalResponse);
+Object.setPrototypeOf(Response2.prototype, GlobalResponse.prototype);
+async function readWithoutBlocking(readPromise) {
+  return Promise.race([readPromise, Promise.resolve().then(() => Promise.resolve(void 0))]);
 }
-function serializeMessage(message) {
-  return JSON.stringify(message) + "\n";
+function writeFromReadableStreamDefaultReader(reader, writable, currentReadPromise) {
+  const cancel = (error2) => {
+    reader.cancel(error2).catch(() => {
+    });
+  };
+  writable.on("close", cancel);
+  writable.on("error", cancel);
+  (currentReadPromise ?? reader.read()).then(flow, handleStreamError);
+  return reader.closed.finally(() => {
+    writable.off("close", cancel);
+    writable.off("error", cancel);
+  });
+  function handleStreamError(error2) {
+    if (error2) {
+      writable.destroy(error2);
+    }
+  }
+  function onDrain() {
+    reader.read().then(flow, handleStreamError);
+  }
+  function flow({ done, value }) {
+    try {
+      if (done) {
+        writable.end();
+      } else if (!writable.write(value)) {
+        writable.once("drain", onDrain);
+      } else {
+        return reader.read().then(flow, handleStreamError);
+      }
+    } catch (e) {
+      handleStreamError(e);
+    }
+  }
 }
+function writeFromReadableStream(stream, writable) {
+  if (stream.locked) {
+    throw new TypeError("ReadableStream is locked.");
+  } else if (writable.destroyed) {
+    return;
+  }
+  return writeFromReadableStreamDefaultReader(stream.getReader(), writable);
+}
+var buildOutgoingHttpHeaders = (headers) => {
+  const res = {};
+  if (!(headers instanceof Headers)) {
+    headers = new Headers(headers ?? void 0);
+  }
+  const cookies = [];
+  for (const [k, v] of headers) {
+    if (k === "set-cookie") {
+      cookies.push(v);
+    } else {
+      res[k] = v;
+    }
+  }
+  if (cookies.length > 0) {
+    res["set-cookie"] = cookies;
+  }
+  res["content-type"] ??= "text/plain; charset=UTF-8";
+  return res;
+};
+var X_ALREADY_SENT = "x-hono-already-sent";
+if (typeof global.crypto === "undefined") {
+  global.crypto = crypto2;
+}
+var outgoingEnded = /* @__PURE__ */ Symbol("outgoingEnded");
+var handleRequestError = () => new Response(null, {
+  status: 400
+});
+var handleFetchError = (e) => new Response(null, {
+  status: e instanceof Error && (e.name === "TimeoutError" || e.constructor.name === "TimeoutError") ? 504 : 500
+});
+var handleResponseError = (e, outgoing) => {
+  const err = e instanceof Error ? e : new Error("unknown error", { cause: e });
+  if (err.code === "ERR_STREAM_PREMATURE_CLOSE") {
+    console.info("The user aborted a request.");
+  } else {
+    console.error(e);
+    if (!outgoing.headersSent) {
+      outgoing.writeHead(500, { "Content-Type": "text/plain" });
+    }
+    outgoing.end(`Error: ${err.message}`);
+    outgoing.destroy(err);
+  }
+};
+var flushHeaders = (outgoing) => {
+  if ("flushHeaders" in outgoing && outgoing.writable) {
+    outgoing.flushHeaders();
+  }
+};
+var responseViaCache = async (res, outgoing) => {
+  let [status, body, header] = res[cacheKey];
+  if (header instanceof Headers) {
+    header = buildOutgoingHttpHeaders(header);
+  }
+  if (typeof body === "string") {
+    header["Content-Length"] = Buffer.byteLength(body);
+  } else if (body instanceof Uint8Array) {
+    header["Content-Length"] = body.byteLength;
+  } else if (body instanceof Blob) {
+    header["Content-Length"] = body.size;
+  }
+  outgoing.writeHead(status, header);
+  if (typeof body === "string" || body instanceof Uint8Array) {
+    outgoing.end(body);
+  } else if (body instanceof Blob) {
+    outgoing.end(new Uint8Array(await body.arrayBuffer()));
+  } else {
+    flushHeaders(outgoing);
+    await writeFromReadableStream(body, outgoing)?.catch(
+      (e) => handleResponseError(e, outgoing)
+    );
+  }
+  ;
+  outgoing[outgoingEnded]?.();
+};
+var isPromise = (res) => typeof res.then === "function";
+var responseViaResponseObject = async (res, outgoing, options = {}) => {
+  if (isPromise(res)) {
+    if (options.errorHandler) {
+      try {
+        res = await res;
+      } catch (err) {
+        const errRes = await options.errorHandler(err);
+        if (!errRes) {
+          return;
+        }
+        res = errRes;
+      }
+    } else {
+      res = await res.catch(handleFetchError);
+    }
+  }
+  if (cacheKey in res) {
+    return responseViaCache(res, outgoing);
+  }
+  const resHeaderRecord = buildOutgoingHttpHeaders(res.headers);
+  if (res.body) {
+    const reader = res.body.getReader();
+    const values = [];
+    let done = false;
+    let currentReadPromise = void 0;
+    if (resHeaderRecord["transfer-encoding"] !== "chunked") {
+      let maxReadCount = 2;
+      for (let i = 0; i < maxReadCount; i++) {
+        currentReadPromise ||= reader.read();
+        const chunk = await readWithoutBlocking(currentReadPromise).catch((e) => {
+          console.error(e);
+          done = true;
+        });
+        if (!chunk) {
+          if (i === 1) {
+            await new Promise((resolve) => setTimeout(resolve));
+            maxReadCount = 3;
+            continue;
+          }
+          break;
+        }
+        currentReadPromise = void 0;
+        if (chunk.value) {
+          values.push(chunk.value);
+        }
+        if (chunk.done) {
+          done = true;
+          break;
+        }
+      }
+      if (done && !("content-length" in resHeaderRecord)) {
+        resHeaderRecord["content-length"] = values.reduce((acc, value) => acc + value.length, 0);
+      }
+    }
+    outgoing.writeHead(res.status, resHeaderRecord);
+    values.forEach((value) => {
+      ;
+      outgoing.write(value);
+    });
+    if (done) {
+      outgoing.end();
+    } else {
+      if (values.length === 0) {
+        flushHeaders(outgoing);
+      }
+      await writeFromReadableStreamDefaultReader(reader, outgoing, currentReadPromise);
+    }
+  } else if (resHeaderRecord[X_ALREADY_SENT]) {
+  } else {
+    outgoing.writeHead(res.status, resHeaderRecord);
+    outgoing.end();
+  }
+  ;
+  outgoing[outgoingEnded]?.();
+};
+var getRequestListener = (fetchCallback, options = {}) => {
+  const autoCleanupIncoming = options.autoCleanupIncoming ?? true;
+  if (options.overrideGlobalObjects !== false && global.Request !== Request) {
+    Object.defineProperty(global, "Request", {
+      value: Request
+    });
+    Object.defineProperty(global, "Response", {
+      value: Response2
+    });
+  }
+  return async (incoming, outgoing) => {
+    let res, req;
+    try {
+      req = newRequest(incoming, options.hostname);
+      let incomingEnded = !autoCleanupIncoming || incoming.method === "GET" || incoming.method === "HEAD";
+      if (!incomingEnded) {
+        ;
+        incoming[wrapBodyStream] = true;
+        incoming.on("end", () => {
+          incomingEnded = true;
+        });
+        if (incoming instanceof Http2ServerRequest2) {
+          ;
+          outgoing[outgoingEnded] = () => {
+            if (!incomingEnded) {
+              setTimeout(() => {
+                if (!incomingEnded) {
+                  setTimeout(() => {
+                    incoming.destroy();
+                    outgoing.destroy();
+                  });
+                }
+              });
+            }
+          };
+        }
+      }
+      outgoing.on("close", () => {
+        const abortController = req[abortControllerKey];
+        if (abortController) {
+          if (incoming.errored) {
+            req[abortControllerKey].abort(incoming.errored.toString());
+          } else if (!outgoing.writableFinished) {
+            req[abortControllerKey].abort("Client connection prematurely closed.");
+          }
+        }
+        if (!incomingEnded) {
+          setTimeout(() => {
+            if (!incomingEnded) {
+              setTimeout(() => {
+                incoming.destroy();
+              });
+            }
+          });
+        }
+      });
+      res = fetchCallback(req, { incoming, outgoing });
+      if (cacheKey in res) {
+        return responseViaCache(res, outgoing);
+      }
+    } catch (e) {
+      if (!res) {
+        if (options.errorHandler) {
+          res = await options.errorHandler(req ? e : toRequestError(e));
+          if (!res) {
+            return;
+          }
+        } else if (!req) {
+          res = handleRequestError();
+        } else {
+          res = handleFetchError(e);
+        }
+      } else {
+        return handleResponseError(e, outgoing);
+      }
+    }
+    try {
+      return await responseViaResponseObject(res, outgoing, options);
+    } catch (e) {
+      return handleResponseError(e, outgoing);
+    }
+  };
+};
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
-var StdioServerTransport = class {
-  constructor(_stdin = process2.stdin, _stdout = process2.stdout) {
-    this._stdin = _stdin;
-    this._stdout = _stdout;
-    this._readBuffer = new ReadBuffer();
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/webStandardStreamableHttp.js
+var WebStandardStreamableHTTPServerTransport = class {
+  constructor(options = {}) {
     this._started = false;
-    this._ondata = (chunk) => {
-      this._readBuffer.append(chunk);
-      this.processReadBuffer();
-    };
-    this._onerror = (error2) => {
-      this.onerror?.(error2);
-    };
+    this._hasHandledRequest = false;
+    this._streamMapping = /* @__PURE__ */ new Map();
+    this._requestToStreamMapping = /* @__PURE__ */ new Map();
+    this._requestResponseMap = /* @__PURE__ */ new Map();
+    this._initialized = false;
+    this._enableJsonResponse = false;
+    this._standaloneSseStreamId = "_GET_stream";
+    this.sessionIdGenerator = options.sessionIdGenerator;
+    this._enableJsonResponse = options.enableJsonResponse ?? false;
+    this._eventStore = options.eventStore;
+    this._onsessioninitialized = options.onsessioninitialized;
+    this._onsessionclosed = options.onsessionclosed;
+    this._allowedHosts = options.allowedHosts;
+    this._allowedOrigins = options.allowedOrigins;
+    this._enableDnsRebindingProtection = options.enableDnsRebindingProtection ?? false;
+    this._retryInterval = options.retryInterval;
   }
   /**
-   * Starts listening for messages on stdin.
+   * Starts the transport. This is required by the Transport interface but is a no-op
+   * for the Streamable HTTP transport as connections are managed per-request.
    */
   async start() {
     if (this._started) {
-      throw new Error("StdioServerTransport already started! If using Server class, note that connect() calls start() automatically.");
+      throw new Error("Transport already started");
     }
     this._started = true;
-    this._stdin.on("data", this._ondata);
-    this._stdin.on("error", this._onerror);
   }
-  processReadBuffer() {
-    while (true) {
-      try {
-        const message = this._readBuffer.readMessage();
-        if (message === null) {
-          break;
-        }
-        this.onmessage?.(message);
-      } catch (error2) {
-        this.onerror?.(error2);
-      }
+  /**
+   * Helper to create a JSON error response
+   */
+  createJsonErrorResponse(status, code, message, options) {
+    const error2 = { code, message };
+    if (options?.data !== void 0) {
+      error2.data = options.data;
     }
-  }
-  async close() {
-    this._stdin.off("data", this._ondata);
-    this._stdin.off("error", this._onerror);
-    const remainingDataListeners = this._stdin.listenerCount("data");
-    if (remainingDataListeners === 0) {
-      this._stdin.pause();
-    }
-    this._readBuffer.clear();
-    this.onclose?.();
-  }
-  send(message) {
-    return new Promise((resolve) => {
-      const json = serializeMessage(message);
-      if (this._stdout.write(json)) {
-        resolve();
-      } else {
-        this._stdout.once("drain", resolve);
+    return new Response(JSON.stringify({
+      jsonrpc: "2.0",
+      error: error2,
+      id: null
+    }), {
+      status,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers
       }
     });
   }
+  /**
+   * Validates request headers for DNS rebinding protection.
+   * @returns Error response if validation fails, undefined if validation passes.
+   */
+  validateRequestHeaders(req) {
+    if (!this._enableDnsRebindingProtection) {
+      return void 0;
+    }
+    if (this._allowedHosts && this._allowedHosts.length > 0) {
+      const hostHeader = req.headers.get("host");
+      if (!hostHeader || !this._allowedHosts.includes(hostHeader)) {
+        const error2 = `Invalid Host header: ${hostHeader}`;
+        this.onerror?.(new Error(error2));
+        return this.createJsonErrorResponse(403, -32e3, error2);
+      }
+    }
+    if (this._allowedOrigins && this._allowedOrigins.length > 0) {
+      const originHeader = req.headers.get("origin");
+      if (originHeader && !this._allowedOrigins.includes(originHeader)) {
+        const error2 = `Invalid Origin header: ${originHeader}`;
+        this.onerror?.(new Error(error2));
+        return this.createJsonErrorResponse(403, -32e3, error2);
+      }
+    }
+    return void 0;
+  }
+  /**
+   * Handles an incoming HTTP request, whether GET, POST, or DELETE
+   * Returns a Response object (Web Standard)
+   */
+  async handleRequest(req, options) {
+    if (!this.sessionIdGenerator && this._hasHandledRequest) {
+      throw new Error("Stateless transport cannot be reused across requests. Create a new transport per request.");
+    }
+    this._hasHandledRequest = true;
+    const validationError = this.validateRequestHeaders(req);
+    if (validationError) {
+      return validationError;
+    }
+    switch (req.method) {
+      case "POST":
+        return this.handlePostRequest(req, options);
+      case "GET":
+        return this.handleGetRequest(req);
+      case "DELETE":
+        return this.handleDeleteRequest(req);
+      default:
+        return this.handleUnsupportedRequest();
+    }
+  }
+  /**
+   * Writes a priming event to establish resumption capability.
+   * Only sends if eventStore is configured (opt-in for resumability) and
+   * the client's protocol version supports empty SSE data (>= 2025-11-25).
+   */
+  async writePrimingEvent(controller, encoder, streamId, protocolVersion) {
+    if (!this._eventStore) {
+      return;
+    }
+    if (protocolVersion < "2025-11-25") {
+      return;
+    }
+    const primingEventId = await this._eventStore.storeEvent(streamId, {});
+    let primingEvent = `id: ${primingEventId}
+data: 
+
+`;
+    if (this._retryInterval !== void 0) {
+      primingEvent = `id: ${primingEventId}
+retry: ${this._retryInterval}
+data: 
+
+`;
+    }
+    controller.enqueue(encoder.encode(primingEvent));
+  }
+  /**
+   * Handles GET requests for SSE stream
+   */
+  async handleGetRequest(req) {
+    const acceptHeader = req.headers.get("accept");
+    if (!acceptHeader?.includes("text/event-stream")) {
+      this.onerror?.(new Error("Not Acceptable: Client must accept text/event-stream"));
+      return this.createJsonErrorResponse(406, -32e3, "Not Acceptable: Client must accept text/event-stream");
+    }
+    const sessionError = this.validateSession(req);
+    if (sessionError) {
+      return sessionError;
+    }
+    const protocolError = this.validateProtocolVersion(req);
+    if (protocolError) {
+      return protocolError;
+    }
+    if (this._eventStore) {
+      const lastEventId = req.headers.get("last-event-id");
+      if (lastEventId) {
+        return this.replayEvents(lastEventId);
+      }
+    }
+    if (this._streamMapping.get(this._standaloneSseStreamId) !== void 0) {
+      this.onerror?.(new Error("Conflict: Only one SSE stream is allowed per session"));
+      return this.createJsonErrorResponse(409, -32e3, "Conflict: Only one SSE stream is allowed per session");
+    }
+    const encoder = new TextEncoder();
+    let streamController;
+    const readable = new ReadableStream({
+      start: (controller) => {
+        streamController = controller;
+      },
+      cancel: () => {
+        this._streamMapping.delete(this._standaloneSseStreamId);
+      }
+    });
+    const headers = {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive"
+    };
+    if (this.sessionId !== void 0) {
+      headers["mcp-session-id"] = this.sessionId;
+    }
+    this._streamMapping.set(this._standaloneSseStreamId, {
+      controller: streamController,
+      encoder,
+      cleanup: () => {
+        this._streamMapping.delete(this._standaloneSseStreamId);
+        try {
+          streamController.close();
+        } catch {
+        }
+      }
+    });
+    return new Response(readable, { headers });
+  }
+  /**
+   * Replays events that would have been sent after the specified event ID
+   * Only used when resumability is enabled
+   */
+  async replayEvents(lastEventId) {
+    if (!this._eventStore) {
+      this.onerror?.(new Error("Event store not configured"));
+      return this.createJsonErrorResponse(400, -32e3, "Event store not configured");
+    }
+    try {
+      let streamId;
+      if (this._eventStore.getStreamIdForEventId) {
+        streamId = await this._eventStore.getStreamIdForEventId(lastEventId);
+        if (!streamId) {
+          this.onerror?.(new Error("Invalid event ID format"));
+          return this.createJsonErrorResponse(400, -32e3, "Invalid event ID format");
+        }
+        if (this._streamMapping.get(streamId) !== void 0) {
+          this.onerror?.(new Error("Conflict: Stream already has an active connection"));
+          return this.createJsonErrorResponse(409, -32e3, "Conflict: Stream already has an active connection");
+        }
+      }
+      const headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive"
+      };
+      if (this.sessionId !== void 0) {
+        headers["mcp-session-id"] = this.sessionId;
+      }
+      const encoder = new TextEncoder();
+      let streamController;
+      const readable = new ReadableStream({
+        start: (controller) => {
+          streamController = controller;
+        },
+        cancel: () => {
+        }
+      });
+      const replayedStreamId = await this._eventStore.replayEventsAfter(lastEventId, {
+        send: async (eventId, message) => {
+          const success = this.writeSSEEvent(streamController, encoder, message, eventId);
+          if (!success) {
+            this.onerror?.(new Error("Failed replay events"));
+            try {
+              streamController.close();
+            } catch {
+            }
+          }
+        }
+      });
+      this._streamMapping.set(replayedStreamId, {
+        controller: streamController,
+        encoder,
+        cleanup: () => {
+          this._streamMapping.delete(replayedStreamId);
+          try {
+            streamController.close();
+          } catch {
+          }
+        }
+      });
+      return new Response(readable, { headers });
+    } catch (error2) {
+      this.onerror?.(error2);
+      return this.createJsonErrorResponse(500, -32e3, "Error replaying events");
+    }
+  }
+  /**
+   * Writes an event to an SSE stream via controller with proper formatting
+   */
+  writeSSEEvent(controller, encoder, message, eventId) {
+    try {
+      let eventData = `event: message
+`;
+      if (eventId) {
+        eventData += `id: ${eventId}
+`;
+      }
+      eventData += `data: ${JSON.stringify(message)}
+
+`;
+      controller.enqueue(encoder.encode(eventData));
+      return true;
+    } catch (error2) {
+      this.onerror?.(error2);
+      return false;
+    }
+  }
+  /**
+   * Handles unsupported requests (PUT, PATCH, etc.)
+   */
+  handleUnsupportedRequest() {
+    this.onerror?.(new Error("Method not allowed."));
+    return new Response(JSON.stringify({
+      jsonrpc: "2.0",
+      error: {
+        code: -32e3,
+        message: "Method not allowed."
+      },
+      id: null
+    }), {
+      status: 405,
+      headers: {
+        Allow: "GET, POST, DELETE",
+        "Content-Type": "application/json"
+      }
+    });
+  }
+  /**
+   * Handles POST requests containing JSON-RPC messages
+   */
+  async handlePostRequest(req, options) {
+    try {
+      const acceptHeader = req.headers.get("accept");
+      if (!acceptHeader?.includes("application/json") || !acceptHeader.includes("text/event-stream")) {
+        this.onerror?.(new Error("Not Acceptable: Client must accept both application/json and text/event-stream"));
+        return this.createJsonErrorResponse(406, -32e3, "Not Acceptable: Client must accept both application/json and text/event-stream");
+      }
+      const ct = req.headers.get("content-type");
+      if (!ct || !ct.includes("application/json")) {
+        this.onerror?.(new Error("Unsupported Media Type: Content-Type must be application/json"));
+        return this.createJsonErrorResponse(415, -32e3, "Unsupported Media Type: Content-Type must be application/json");
+      }
+      const requestInfo = {
+        headers: Object.fromEntries(req.headers.entries()),
+        url: new URL(req.url)
+      };
+      let rawMessage;
+      if (options?.parsedBody !== void 0) {
+        rawMessage = options.parsedBody;
+      } else {
+        try {
+          rawMessage = await req.json();
+        } catch {
+          this.onerror?.(new Error("Parse error: Invalid JSON"));
+          return this.createJsonErrorResponse(400, -32700, "Parse error: Invalid JSON");
+        }
+      }
+      let messages;
+      try {
+        if (Array.isArray(rawMessage)) {
+          messages = rawMessage.map((msg) => JSONRPCMessageSchema.parse(msg));
+        } else {
+          messages = [JSONRPCMessageSchema.parse(rawMessage)];
+        }
+      } catch {
+        this.onerror?.(new Error("Parse error: Invalid JSON-RPC message"));
+        return this.createJsonErrorResponse(400, -32700, "Parse error: Invalid JSON-RPC message");
+      }
+      const isInitializationRequest = messages.some(isInitializeRequest);
+      if (isInitializationRequest) {
+        if (this._initialized && this.sessionId !== void 0) {
+          this.onerror?.(new Error("Invalid Request: Server already initialized"));
+          return this.createJsonErrorResponse(400, -32600, "Invalid Request: Server already initialized");
+        }
+        if (messages.length > 1) {
+          this.onerror?.(new Error("Invalid Request: Only one initialization request is allowed"));
+          return this.createJsonErrorResponse(400, -32600, "Invalid Request: Only one initialization request is allowed");
+        }
+        this.sessionId = this.sessionIdGenerator?.();
+        this._initialized = true;
+        if (this.sessionId && this._onsessioninitialized) {
+          await Promise.resolve(this._onsessioninitialized(this.sessionId));
+        }
+      }
+      if (!isInitializationRequest) {
+        const sessionError = this.validateSession(req);
+        if (sessionError) {
+          return sessionError;
+        }
+        const protocolError = this.validateProtocolVersion(req);
+        if (protocolError) {
+          return protocolError;
+        }
+      }
+      const hasRequests = messages.some(isJSONRPCRequest);
+      if (!hasRequests) {
+        for (const message of messages) {
+          this.onmessage?.(message, { authInfo: options?.authInfo, requestInfo });
+        }
+        return new Response(null, { status: 202 });
+      }
+      const streamId = crypto.randomUUID();
+      const initRequest = messages.find((m) => isInitializeRequest(m));
+      const clientProtocolVersion = initRequest ? initRequest.params.protocolVersion : req.headers.get("mcp-protocol-version") ?? DEFAULT_NEGOTIATED_PROTOCOL_VERSION;
+      if (this._enableJsonResponse) {
+        return new Promise((resolve) => {
+          this._streamMapping.set(streamId, {
+            resolveJson: resolve,
+            cleanup: () => {
+              this._streamMapping.delete(streamId);
+            }
+          });
+          for (const message of messages) {
+            if (isJSONRPCRequest(message)) {
+              this._requestToStreamMapping.set(message.id, streamId);
+            }
+          }
+          for (const message of messages) {
+            this.onmessage?.(message, { authInfo: options?.authInfo, requestInfo });
+          }
+        });
+      }
+      const encoder = new TextEncoder();
+      let streamController;
+      const readable = new ReadableStream({
+        start: (controller) => {
+          streamController = controller;
+        },
+        cancel: () => {
+          this._streamMapping.delete(streamId);
+        }
+      });
+      const headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive"
+      };
+      if (this.sessionId !== void 0) {
+        headers["mcp-session-id"] = this.sessionId;
+      }
+      for (const message of messages) {
+        if (isJSONRPCRequest(message)) {
+          this._streamMapping.set(streamId, {
+            controller: streamController,
+            encoder,
+            cleanup: () => {
+              this._streamMapping.delete(streamId);
+              try {
+                streamController.close();
+              } catch {
+              }
+            }
+          });
+          this._requestToStreamMapping.set(message.id, streamId);
+        }
+      }
+      await this.writePrimingEvent(streamController, encoder, streamId, clientProtocolVersion);
+      for (const message of messages) {
+        let closeSSEStream;
+        let closeStandaloneSSEStream;
+        if (isJSONRPCRequest(message) && this._eventStore && clientProtocolVersion >= "2025-11-25") {
+          closeSSEStream = () => {
+            this.closeSSEStream(message.id);
+          };
+          closeStandaloneSSEStream = () => {
+            this.closeStandaloneSSEStream();
+          };
+        }
+        this.onmessage?.(message, { authInfo: options?.authInfo, requestInfo, closeSSEStream, closeStandaloneSSEStream });
+      }
+      return new Response(readable, { status: 200, headers });
+    } catch (error2) {
+      this.onerror?.(error2);
+      return this.createJsonErrorResponse(400, -32700, "Parse error", { data: String(error2) });
+    }
+  }
+  /**
+   * Handles DELETE requests to terminate sessions
+   */
+  async handleDeleteRequest(req) {
+    const sessionError = this.validateSession(req);
+    if (sessionError) {
+      return sessionError;
+    }
+    const protocolError = this.validateProtocolVersion(req);
+    if (protocolError) {
+      return protocolError;
+    }
+    await Promise.resolve(this._onsessionclosed?.(this.sessionId));
+    await this.close();
+    return new Response(null, { status: 200 });
+  }
+  /**
+   * Validates session ID for non-initialization requests.
+   * Returns Response error if invalid, undefined otherwise
+   */
+  validateSession(req) {
+    if (this.sessionIdGenerator === void 0) {
+      return void 0;
+    }
+    if (!this._initialized) {
+      this.onerror?.(new Error("Bad Request: Server not initialized"));
+      return this.createJsonErrorResponse(400, -32e3, "Bad Request: Server not initialized");
+    }
+    const sessionId = req.headers.get("mcp-session-id");
+    if (!sessionId) {
+      this.onerror?.(new Error("Bad Request: Mcp-Session-Id header is required"));
+      return this.createJsonErrorResponse(400, -32e3, "Bad Request: Mcp-Session-Id header is required");
+    }
+    if (sessionId !== this.sessionId) {
+      this.onerror?.(new Error("Session not found"));
+      return this.createJsonErrorResponse(404, -32001, "Session not found");
+    }
+    return void 0;
+  }
+  /**
+   * Validates the MCP-Protocol-Version header on incoming requests.
+   *
+   * For initialization: Version negotiation handles unknown versions gracefully
+   * (server responds with its supported version).
+   *
+   * For subsequent requests with MCP-Protocol-Version header:
+   * - Accept if in supported list
+   * - 400 if unsupported
+   *
+   * For HTTP requests without the MCP-Protocol-Version header:
+   * - Accept and default to the version negotiated at initialization
+   */
+  validateProtocolVersion(req) {
+    const protocolVersion = req.headers.get("mcp-protocol-version");
+    if (protocolVersion !== null && !SUPPORTED_PROTOCOL_VERSIONS.includes(protocolVersion)) {
+      this.onerror?.(new Error(`Bad Request: Unsupported protocol version: ${protocolVersion} (supported versions: ${SUPPORTED_PROTOCOL_VERSIONS.join(", ")})`));
+      return this.createJsonErrorResponse(400, -32e3, `Bad Request: Unsupported protocol version: ${protocolVersion} (supported versions: ${SUPPORTED_PROTOCOL_VERSIONS.join(", ")})`);
+    }
+    return void 0;
+  }
+  async close() {
+    this._streamMapping.forEach(({ cleanup }) => {
+      cleanup();
+    });
+    this._streamMapping.clear();
+    this._requestResponseMap.clear();
+    this.onclose?.();
+  }
+  /**
+   * Close an SSE stream for a specific request, triggering client reconnection.
+   * Use this to implement polling behavior during long-running operations -
+   * client will reconnect after the retry interval specified in the priming event.
+   */
+  closeSSEStream(requestId) {
+    const streamId = this._requestToStreamMapping.get(requestId);
+    if (!streamId)
+      return;
+    const stream = this._streamMapping.get(streamId);
+    if (stream) {
+      stream.cleanup();
+    }
+  }
+  /**
+   * Close the standalone GET SSE stream, triggering client reconnection.
+   * Use this to implement polling behavior for server-initiated notifications.
+   */
+  closeStandaloneSSEStream() {
+    const stream = this._streamMapping.get(this._standaloneSseStreamId);
+    if (stream) {
+      stream.cleanup();
+    }
+  }
+  async send(message, options) {
+    let requestId = options?.relatedRequestId;
+    if (isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message)) {
+      requestId = message.id;
+    }
+    if (requestId === void 0) {
+      if (isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message)) {
+        throw new Error("Cannot send a response on a standalone SSE stream unless resuming a previous client request");
+      }
+      let eventId;
+      if (this._eventStore) {
+        eventId = await this._eventStore.storeEvent(this._standaloneSseStreamId, message);
+      }
+      const standaloneSse = this._streamMapping.get(this._standaloneSseStreamId);
+      if (standaloneSse === void 0) {
+        return;
+      }
+      if (standaloneSse.controller && standaloneSse.encoder) {
+        this.writeSSEEvent(standaloneSse.controller, standaloneSse.encoder, message, eventId);
+      }
+      return;
+    }
+    const streamId = this._requestToStreamMapping.get(requestId);
+    if (!streamId) {
+      throw new Error(`No connection established for request ID: ${String(requestId)}`);
+    }
+    const stream = this._streamMapping.get(streamId);
+    if (!this._enableJsonResponse && stream?.controller && stream?.encoder) {
+      let eventId;
+      if (this._eventStore) {
+        eventId = await this._eventStore.storeEvent(streamId, message);
+      }
+      this.writeSSEEvent(stream.controller, stream.encoder, message, eventId);
+    }
+    if (isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message)) {
+      this._requestResponseMap.set(requestId, message);
+      const relatedIds = Array.from(this._requestToStreamMapping.entries()).filter(([_, sid]) => sid === streamId).map(([id]) => id);
+      const allResponsesReady = relatedIds.every((id) => this._requestResponseMap.has(id));
+      if (allResponsesReady) {
+        if (!stream) {
+          throw new Error(`No connection established for request ID: ${String(requestId)}`);
+        }
+        if (this._enableJsonResponse && stream.resolveJson) {
+          const headers = {
+            "Content-Type": "application/json"
+          };
+          if (this.sessionId !== void 0) {
+            headers["mcp-session-id"] = this.sessionId;
+          }
+          const responses = relatedIds.map((id) => this._requestResponseMap.get(id));
+          if (responses.length === 1) {
+            stream.resolveJson(new Response(JSON.stringify(responses[0]), { status: 200, headers }));
+          } else {
+            stream.resolveJson(new Response(JSON.stringify(responses), { status: 200, headers }));
+          }
+        } else {
+          stream.cleanup();
+        }
+        for (const id of relatedIds) {
+          this._requestResponseMap.delete(id);
+          this._requestToStreamMapping.delete(id);
+        }
+      }
+    }
+  }
 };
 
+// node_modules/@modelcontextprotocol/sdk/dist/esm/server/streamableHttp.js
+var StreamableHTTPServerTransport = class {
+  constructor(options = {}) {
+    this._requestContext = /* @__PURE__ */ new WeakMap();
+    this._webStandardTransport = new WebStandardStreamableHTTPServerTransport(options);
+    this._requestListener = getRequestListener(async (webRequest) => {
+      const context = this._requestContext.get(webRequest);
+      return this._webStandardTransport.handleRequest(webRequest, {
+        authInfo: context?.authInfo,
+        parsedBody: context?.parsedBody
+      });
+    }, { overrideGlobalObjects: false });
+  }
+  /**
+   * Gets the session ID for this transport instance.
+   */
+  get sessionId() {
+    return this._webStandardTransport.sessionId;
+  }
+  /**
+   * Sets callback for when the transport is closed.
+   */
+  set onclose(handler2) {
+    this._webStandardTransport.onclose = handler2;
+  }
+  get onclose() {
+    return this._webStandardTransport.onclose;
+  }
+  /**
+   * Sets callback for transport errors.
+   */
+  set onerror(handler2) {
+    this._webStandardTransport.onerror = handler2;
+  }
+  get onerror() {
+    return this._webStandardTransport.onerror;
+  }
+  /**
+   * Sets callback for incoming messages.
+   */
+  set onmessage(handler2) {
+    this._webStandardTransport.onmessage = handler2;
+  }
+  get onmessage() {
+    return this._webStandardTransport.onmessage;
+  }
+  /**
+   * Starts the transport. This is required by the Transport interface but is a no-op
+   * for the Streamable HTTP transport as connections are managed per-request.
+   */
+  async start() {
+    return this._webStandardTransport.start();
+  }
+  /**
+   * Closes the transport and all active connections.
+   */
+  async close() {
+    return this._webStandardTransport.close();
+  }
+  /**
+   * Sends a JSON-RPC message through the transport.
+   */
+  async send(message, options) {
+    return this._webStandardTransport.send(message, options);
+  }
+  /**
+   * Handles an incoming HTTP request, whether GET or POST.
+   *
+   * This method converts Node.js HTTP objects to Web Standard Request/Response
+   * and delegates to the underlying WebStandardStreamableHTTPServerTransport.
+   *
+   * @param req - Node.js IncomingMessage, optionally with auth property from middleware
+   * @param res - Node.js ServerResponse
+   * @param parsedBody - Optional pre-parsed body from body-parser middleware
+   */
+  async handleRequest(req, res, parsedBody) {
+    const authInfo = req.auth;
+    const handler2 = getRequestListener(async (webRequest) => {
+      return this._webStandardTransport.handleRequest(webRequest, {
+        authInfo,
+        parsedBody
+      });
+    }, { overrideGlobalObjects: false });
+    await handler2(req, res);
+  }
+  /**
+   * Close an SSE stream for a specific request, triggering client reconnection.
+   * Use this to implement polling behavior during long-running operations -
+   * client will reconnect after the retry interval specified in the priming event.
+   */
+  closeSSEStream(requestId) {
+    this._webStandardTransport.closeSSEStream(requestId);
+  }
+  /**
+   * Close the standalone GET SSE stream, triggering client reconnection.
+   * Use this to implement polling behavior for server-initiated notifications.
+   */
+  closeStandaloneSSEStream() {
+    this._webStandardTransport.closeStandaloneSSEStream();
+  }
+};
+
+// dist/remote.js
+import { randomUUID } from "crypto";
+import { createServer } from "http";
+
 // dist/config.js
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
 
@@ -21098,7 +22246,7 @@ function getUserAgent() {
 }
 
 // node_modules/before-after-hook/lib/register.js
-function register(state2, name, method, options) {
+function register(state, name, method, options) {
   if (typeof method !== "function") {
     throw new Error("method for before hook must be a function");
   }
@@ -21107,24 +22255,24 @@ function register(state2, name, method, options) {
   }
   if (Array.isArray(name)) {
     return name.reverse().reduce((callback, name2) => {
-      return register.bind(null, state2, name2, callback, options);
+      return register.bind(null, state, name2, callback, options);
     }, method)();
   }
   return Promise.resolve().then(() => {
-    if (!state2.registry[name]) {
+    if (!state.registry[name]) {
       return method(options);
     }
-    return state2.registry[name].reduce((method2, registered) => {
+    return state.registry[name].reduce((method2, registered) => {
       return registered.hook.bind(null, method2, options);
     }, method)();
   });
 }
 
 // node_modules/before-after-hook/lib/add.js
-function addHook(state2, kind, name, hook2) {
+function addHook(state, kind, name, hook2) {
   const orig = hook2;
-  if (!state2.registry[name]) {
-    state2.registry[name] = [];
+  if (!state.registry[name]) {
+    state.registry[name] = [];
   }
   if (kind === "before") {
     hook2 = (method, options) => {
@@ -21149,38 +22297,38 @@ function addHook(state2, kind, name, hook2) {
       });
     };
   }
-  state2.registry[name].push({
+  state.registry[name].push({
     hook: hook2,
     orig
   });
 }
 
 // node_modules/before-after-hook/lib/remove.js
-function removeHook(state2, name, method) {
-  if (!state2.registry[name]) {
+function removeHook(state, name, method) {
+  if (!state.registry[name]) {
     return;
   }
-  const index = state2.registry[name].map((registered) => {
+  const index = state.registry[name].map((registered) => {
     return registered.orig;
   }).indexOf(method);
   if (index === -1) {
     return;
   }
-  state2.registry[name].splice(index, 1);
+  state.registry[name].splice(index, 1);
 }
 
 // node_modules/before-after-hook/index.js
 var bind = Function.bind;
 var bindable = bind.bind(bind);
-function bindApi(hook2, state2, name) {
+function bindApi(hook2, state, name) {
   const removeHookRef = bindable(removeHook, null).apply(
     null,
-    name ? [state2, name] : [state2]
+    name ? [state, name] : [state]
   );
   hook2.api = { remove: removeHookRef };
   hook2.remove = removeHookRef;
   ["before", "error", "after", "wrap"].forEach((kind) => {
-    const args = name ? [state2, kind, name] : [state2, kind];
+    const args = name ? [state, kind, name] : [state, kind];
     hook2[kind] = hook2.api[kind] = bindable(addHook, null).apply(null, args);
   });
 }
@@ -21194,11 +22342,11 @@ function Singular() {
   return singularHook;
 }
 function Collection() {
-  const state2 = {
+  const state = {
     registry: {}
   };
-  const hook2 = register.bind(null, state2);
-  bindApi(hook2, state2);
+  const hook2 = register.bind(null, state);
+  bindApi(hook2, state);
   return hook2;
 }
 var before_after_hook_default = { Singular, Collection };
@@ -21606,7 +22754,7 @@ var JSONParse = (text, reviver) => {
 };
 
 // node_modules/@octokit/request-error/dist-src/index.js
-var RequestError = class extends Error {
+var RequestError2 = class extends Error {
   name;
   /**
    * http status code
@@ -21704,7 +22852,7 @@ async function fetchWrapper(requestOptions) {
         }
       }
     }
-    const requestError = new RequestError(message, 500, {
+    const requestError = new RequestError2(message, 500, {
       request: requestOptions
     });
     requestError.cause = error2;
@@ -21736,21 +22884,21 @@ async function fetchWrapper(requestOptions) {
     if (status < 400) {
       return octokitResponse;
     }
-    throw new RequestError(fetchResponse.statusText, status, {
+    throw new RequestError2(fetchResponse.statusText, status, {
       response: octokitResponse,
       request: requestOptions
     });
   }
   if (status === 304) {
     octokitResponse.data = await getResponseData(fetchResponse);
-    throw new RequestError("Not modified", status, {
+    throw new RequestError2("Not modified", status, {
       response: octokitResponse,
       request: requestOptions
     });
   }
   if (status >= 400) {
     octokitResponse.data = await getResponseData(fetchResponse);
-    throw new RequestError(toErrorMessage(octokitResponse.data), status, {
+    throw new RequestError2(toErrorMessage(octokitResponse.data), status, {
       response: octokitResponse,
       request: requestOptions
     });
@@ -21906,13 +23054,13 @@ function graphql(request2, query, options) {
   });
 }
 function withDefaults3(request2, newDefaults) {
-  const newRequest = request2.defaults(newDefaults);
+  const newRequest2 = request2.defaults(newDefaults);
   const newApi = (query, options) => {
-    return graphql(newRequest, query, options);
+    return graphql(newRequest2, query, options);
   };
   return Object.assign(newApi, {
-    defaults: withDefaults3.bind(null, newRequest),
-    endpoint: newRequest.endpoint
+    defaults: withDefaults3.bind(null, newRequest2),
+    endpoint: newRequest2.endpoint
   });
 }
 var graphql2 = withDefaults3(request, {
@@ -24701,83 +25849,6 @@ var Octokit2 = Octokit.plugin(requestLog, legacyRestEndpointMethods, paginateRes
 
 // dist/config.js
 var CONFIG_PATH = join(homedir(), ".webclaw", "config.json");
-function tryLoadConfig() {
-  const envToken = process.env.WEBCLAW_GITHUB_TOKEN || process.env.GITHUB_TOKEN;
-  const envOwner = process.env.WEBCLAW_OWNER;
-  const envRepo = process.env.WEBCLAW_REPO;
-  const envBranch = process.env.WEBCLAW_BRANCH;
-  if (envToken && envOwner && envRepo) {
-    return {
-      token: envToken,
-      owner: envOwner,
-      repo: envRepo,
-      branch: envBranch || "main"
-    };
-  }
-  if (!existsSync(CONFIG_PATH)) {
-    return null;
-  }
-  try {
-    const raw = readFileSync(CONFIG_PATH, "utf-8");
-    const parsed = JSON.parse(raw);
-    if (!parsed.token || !parsed.owner || !parsed.repo) {
-      return null;
-    }
-    return {
-      token: parsed.token,
-      owner: parsed.owner,
-      repo: parsed.repo,
-      branch: parsed.branch || "main"
-    };
-  } catch {
-    return null;
-  }
-}
-function saveConfig(config2) {
-  const dir = dirname(CONFIG_PATH);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true, mode: 448 });
-  }
-  writeFileSync(CONFIG_PATH, JSON.stringify(config2, null, 2), {
-    encoding: "utf-8",
-    mode: 384
-  });
-}
-function saveToken(token, authMethod) {
-  const dir = dirname(CONFIG_PATH);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true, mode: 448 });
-  }
-  let existing = {};
-  if (existsSync(CONFIG_PATH)) {
-    try {
-      existing = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
-    } catch {
-    }
-  }
-  const merged = { ...existing, token, auth_method: authMethod };
-  writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2), {
-    encoding: "utf-8",
-    mode: 384
-  });
-}
-function loadTokenOnly() {
-  const envToken = process.env.WEBCLAW_GITHUB_TOKEN || process.env.GITHUB_TOKEN;
-  if (envToken)
-    return envToken;
-  if (!existsSync(CONFIG_PATH))
-    return null;
-  try {
-    const raw = readFileSync(CONFIG_PATH, "utf-8");
-    const parsed = JSON.parse(raw);
-    return parsed.token || null;
-  } catch {
-    return null;
-  }
-}
-function getConfigPath() {
-  return CONFIG_PATH;
-}
 function createOctokit(token) {
   return new Octokit2({ auth: token });
 }
@@ -25070,24 +26141,24 @@ function formatTree(files, indent = "") {
   }
   return out;
 }
-function registerTools(server2, getState, setState, options) {
+function registerTools(server, getState, setState, options) {
   function requireConfig() {
-    const state2 = getState();
-    if (!state2.config || !state2.octokit) {
+    const state = getState();
+    if (!state.config || !state.octokit) {
       throw new Error("WebClaw is not configured yet. Use webclaw_connect to authenticate with GitHub, then webclaw_select_repo to choose your vault.");
     }
-    return { octokit: state2.octokit, owner: state2.config.owner, repo: state2.config.repo, branch: state2.config.branch };
+    return { octokit: state.octokit, owner: state.config.owner, repo: state.config.repo, branch: state.config.branch };
   }
-  server2.tool("webclaw_connect", "Authenticate with GitHub using Device Flow. Step 1: call without params to get a code. Step 2: tell the user to open the URL and enter the code. Step 3: call again with device_code to complete authentication.", {
+  server.tool("webclaw_connect", "Authenticate with GitHub using Device Flow. Step 1: call without params to get a code. Step 2: tell the user to open the URL and enter the code. Step 3: call again with device_code to complete authentication.", {
     device_code: external_exports.string().optional().describe("Device code from step 1. Omit to start a new auth flow.")
   }, async ({ device_code }, extra) => {
-    const state2 = getState();
-    const existingToken = options.isRemote ? state2.config?.token ?? null : options.loadTokenOnly?.() ?? null;
+    const state = getState();
+    const existingToken = options.isRemote ? state.config?.token ?? null : options.loadTokenOnly?.() ?? null;
     if (existingToken && !device_code) {
       try {
         const testOctokit = createOctokit(existingToken);
         const { data: user } = await testOctokit.users.getAuthenticated();
-        if (!state2.octokit)
+        if (!state.octokit)
           setState({ octokit: testOctokit });
         return {
           content: [
@@ -25095,7 +26166,7 @@ function registerTools(server2, getState, setState, options) {
               type: "text",
               text: `Already connected as **${user.login}**.
 
-` + (state2.config ? `Current vault: ${state2.config.owner}/${state2.config.repo} (${state2.config.branch})
+` + (state.config ? `Current vault: ${state.config.owner}/${state.config.repo} (${state.config.branch})
 All tools are ready.` : `Use **webclaw_select_repo** to choose your vault.`)
             }
           ]
@@ -25143,14 +26214,14 @@ Once authorized, call webclaw_connect again with device_code="${deviceCodeRespon
       ]
     };
   });
-  server2.tool("webclaw_select_repo", "Select a GitHub repository as your vault. Without repo_name, lists your repos. With repo_name (owner/repo format), selects it.", {
+  server.tool("webclaw_select_repo", "Select a GitHub repository as your vault. Without repo_name, lists your repos. With repo_name (owner/repo format), selects it.", {
     repo_name: external_exports.string().optional().describe("Repository in 'owner/repo' format. Omit to list available repos."),
     branch: external_exports.string().optional().describe("Branch to use (default: repo's default branch)"),
     filter: external_exports.string().optional().describe("Filter repos by name (substring match)")
   }, async ({ repo_name, branch, filter }) => {
-    const state2 = getState();
-    const token = options.isRemote ? state2.config?.token ?? (state2.octokit ? "__from_octokit__" : null) : options.loadTokenOnly?.() ?? null;
-    if (!token && !state2.octokit) {
+    const state = getState();
+    const token = options.isRemote ? state.config?.token ?? (state.octokit ? "__from_octokit__" : null) : options.loadTokenOnly?.() ?? null;
+    if (!token && !state.octokit) {
       return {
         content: [
           {
@@ -25160,7 +26231,7 @@ Once authorized, call webclaw_connect again with device_code="${deviceCodeRespon
         ]
       };
     }
-    const kit = state2.octokit || (token && token !== "__from_octokit__" ? createOctokit(token) : null);
+    const kit = state.octokit || (token && token !== "__from_octokit__" ? createOctokit(token) : null);
     if (!kit) {
       return {
         content: [
@@ -25171,7 +26242,7 @@ Once authorized, call webclaw_connect again with device_code="${deviceCodeRespon
         ]
       };
     }
-    if (!state2.octokit)
+    if (!state.octokit)
       setState({ octokit: kit });
     if (!repo_name) {
       let repos = await listUserRepos(kit, 30);
@@ -25229,7 +26300,7 @@ Use webclaw_select_repo with repo_name="owner/repo" to select one.`;
         owner,
         repo,
         branch: selectedBranch,
-        auth_method: state2.config?.auth_method || "oauth_device_flow"
+        auth_method: state.config?.auth_method || "oauth_device_flow"
       };
       if (!options.isRemote) {
         options.saveConfig?.(newConfig);
@@ -25262,7 +26333,7 @@ All WebClaw tools are now active.`
       throw err;
     }
   });
-  server2.tool("webclaw_list_files", "List files and directories in the vault. Returns a tree view of the repository.", {
+  server.tool("webclaw_list_files", "List files and directories in the vault. Returns a tree view of the repository.", {
     directory: external_exports.string().optional().describe("Subdirectory to list (default: root)"),
     recursive: external_exports.boolean().optional().default(true).describe("Include subdirectories recursively"),
     extension: external_exports.string().optional().describe("Filter by file extension (e.g. '.md')")
@@ -25299,7 +26370,7 @@ ${fileCount} files, ${dirCount} folders
       ]
     };
   });
-  server2.tool("webclaw_read_file", "Read the content of a file from the vault.", {
+  server.tool("webclaw_read_file", "Read the content of a file from the vault.", {
     path: external_exports.string().describe("Path to the file in the vault")
   }, async ({ path }) => {
     const ctx = requireConfig();
@@ -25316,7 +26387,7 @@ ${fileCount} files, ${dirCount} folders
       content: [{ type: "text", text: header + content }]
     };
   });
-  server2.tool("webclaw_create_file", "Create a new file in the vault. Commits directly to the configured branch.", {
+  server.tool("webclaw_create_file", "Create a new file in the vault. Commits directly to the configured branch.", {
     path: external_exports.string().describe("Path for the new file"),
     content: external_exports.string().describe("File content"),
     message: external_exports.string().optional().describe("Commit message (auto-generated if omitted)")
@@ -25335,7 +26406,7 @@ SHA: ${sha.substring(0, 7)}`
       ]
     };
   });
-  server2.tool("webclaw_update_file", "Update an existing file in the vault. Supports full replacement or partial text substitution. Fetches the latest SHA to prevent conflicts.", {
+  server.tool("webclaw_update_file", "Update an existing file in the vault. Supports full replacement or partial text substitution. Fetches the latest SHA to prevent conflicts.", {
     path: external_exports.string().describe("Path to the file to update"),
     content: external_exports.string().optional().describe("Full replacement content (use this OR old_text+new_text)"),
     old_text: external_exports.string().optional().describe("Text to find and replace (use with new_text)"),
@@ -25392,7 +26463,7 @@ SHA: ${sha.substring(0, 7)}`
       ]
     };
   });
-  server2.tool("webclaw_delete_file", "Delete a file from the vault.", {
+  server.tool("webclaw_delete_file", "Delete a file from the vault.", {
     path: external_exports.string().describe("Path to the file to delete"),
     message: external_exports.string().optional().describe("Commit message")
   }, async ({ path, message }) => {
@@ -25410,7 +26481,7 @@ Commit: ${commitMsg}`
       ]
     };
   });
-  server2.tool("webclaw_search_content", "Search for text across vault files. Scans file contents in batches.", {
+  server.tool("webclaw_search_content", "Search for text across vault files. Scans file contents in batches.", {
     query: external_exports.string().describe("Text to search for (case-insensitive)"),
     directory: external_exports.string().optional().describe("Limit search to a subdirectory"),
     extension: external_exports.string().optional().default(".md").describe("File extension filter (default: .md)"),
@@ -25477,7 +26548,7 @@ ${r.matches.join("\n")}
     }
     return { content: [{ type: "text", text }] };
   });
-  server2.tool("webclaw_get_tasks", "Extract checkbox tasks (- [ ] / - [x]) from vault files.", {
+  server.tool("webclaw_get_tasks", "Extract checkbox tasks (- [ ] / - [x]) from vault files.", {
     directory: external_exports.string().optional().describe("Limit to a subdirectory"),
     status: external_exports.enum(["all", "pending", "completed"]).optional().default("all").describe("Filter by completion status")
   }, async ({ directory, status }) => {
@@ -25530,7 +26601,7 @@ ${r.matches.join("\n")}
     }
     return { content: [{ type: "text", text }] };
   });
-  server2.tool("webclaw_get_tags", "Extract tags from frontmatter across vault files, sorted by frequency.", {
+  server.tool("webclaw_get_tags", "Extract tags from frontmatter across vault files, sorted by frequency.", {
     directory: external_exports.string().optional().describe("Limit to a subdirectory")
   }, async ({ directory }) => {
     const ctx = requireConfig();
@@ -25583,7 +26654,7 @@ ${r.matches.join("\n")}
     }
     return { content: [{ type: "text", text }] };
   });
-  server2.tool("webclaw_file_history", "Get the commit history for a file in the vault.", {
+  server.tool("webclaw_file_history", "Get the commit history for a file in the vault.", {
     path: external_exports.string().describe("Path to the file"),
     limit: external_exports.number().optional().default(10).describe("Number of commits to return (default: 10)")
   }, async ({ path, limit }) => {
@@ -25606,7 +26677,7 @@ ${r.matches.join("\n")}
     }
     return { content: [{ type: "text", text }] };
   });
-  server2.tool("webclaw_vault_stats", "Get an overview of the vault: file counts, types, tags, tasks summary.", {}, async () => {
+  server.tool("webclaw_vault_stats", "Get an overview of the vault: file counts, types, tags, tasks summary.", {}, async () => {
     const ctx = requireConfig();
     const items = await getRepoTree(ctx.octokit, ctx.owner, ctx.repo, ctx.branch);
     const files = items.filter((i) => i.type === "blob");
@@ -25672,64 +26743,80 @@ ${extList}
   });
 }
 
-// dist/index.js
-var state = {
-  config: tryLoadConfig(),
-  octokit: null
-};
-if (state.config)
-  state.octokit = createOctokit(state.config.token);
-var server = new McpServer({
-  name: "webclaw",
-  version: "1.3.1"
-});
-server.prompt("webclaw_onboarding", "Guide the user through initial WebClaw setup when not configured", () => {
-  if (state.config) {
-    return {
-      messages: [
-        {
-          role: "user",
-          content: {
-            type: "text",
-            text: `WebClaw is already configured for ${state.config.owner}/${state.config.repo} (branch: ${state.config.branch}). All tools are ready to use.`
-          }
-        }
-      ]
-    };
-  }
-  return {
-    messages: [
-      {
-        role: "user",
-        content: {
-          type: "text",
-          text: "WebClaw is not configured yet. To connect your GitHub vault:\n\n1. Use **webclaw_connect** \u2014 I'll open your browser for GitHub authentication (no token needed)\n2. Use **webclaw_select_repo** \u2014 Choose which repo to use as your vault\n\nSay 'connect my vault' to get started!"
-        }
-      }
-    ]
-  };
-});
-registerTools(server, () => state, (patch) => {
-  state = { ...state, ...patch };
-}, {
-  isRemote: false,
-  loadTokenOnly,
-  saveToken,
-  saveConfig,
-  getConfigPath,
-  tryLoadConfig
-});
-async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("WebClaw MCP server v1.3.1 running on stdio");
-  if (!state.config) {
-    console.error("\u26A0\uFE0F  No config found \u2014 use webclaw_connect to authenticate");
-  }
+// dist/remote.js
+var sessions = /* @__PURE__ */ new Map();
+function setCorsHeaders(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version");
+  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 }
-main().catch((err) => {
-  console.error("Fatal error:", err);
-  process.exit(1);
+function createSession() {
+  const mcpServer = new McpServer({
+    name: "webclaw",
+    version: "1.3.1"
+  });
+  const sessionState = { config: null, octokit: null };
+  registerTools(mcpServer, () => sessionState, (patch) => {
+    Object.assign(sessionState, patch);
+  }, { isRemote: true });
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+    onsessioninitialized: (sessionId) => {
+      sessions.set(sessionId, entry);
+      console.log(`[session] created: ${sessionId}`);
+    },
+    onsessionclosed: (sessionId) => {
+      sessions.delete(sessionId);
+      console.log(`[session] closed: ${sessionId}`);
+    }
+  });
+  const entry = { transport, server: mcpServer, state: sessionState };
+  return entry;
+}
+var httpServer = createServer(async (req, res) => {
+  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  setCorsHeaders(res);
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+  if (url.pathname === "/health" || url.pathname === "/") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      status: "ok",
+      server: "webclaw-mcp",
+      version: "1.3.1",
+      sessions: sessions.size
+    }));
+    return;
+  }
+  if (url.pathname === "/mcp") {
+    const sessionId = req.headers["mcp-session-id"];
+    if (sessionId && sessions.has(sessionId)) {
+      const entry = sessions.get(sessionId);
+      await entry.transport.handleRequest(req, res);
+      return;
+    }
+    if (req.method === "POST") {
+      const entry = createSession();
+      await entry.server.connect(entry.transport);
+      await entry.transport.handleRequest(req, res);
+      return;
+    }
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Session not found" }));
+    return;
+  }
+  res.writeHead(404, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error: "Not found" }));
+});
+var PORT = parseInt(process.env.PORT || "3000", 10);
+httpServer.listen(PORT, () => {
+  console.log(`WebClaw MCP remote server v1.3.1 listening on port ${PORT}`);
+  console.log(`  MCP endpoint: http://localhost:${PORT}/mcp`);
+  console.log(`  Health check: http://localhost:${PORT}/health`);
 });
 /*! Bundled license information:
 
