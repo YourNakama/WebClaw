@@ -21,6 +21,41 @@ const server = new McpServer({
     name: "webclaw",
     version: "1.0.0",
 });
+// === Prompts ===
+server.prompt("webclaw_onboarding", "Guide the user through initial WebClaw setup when not configured", () => {
+    if (config) {
+        return {
+            messages: [
+                {
+                    role: "user",
+                    content: {
+                        type: "text",
+                        text: `WebClaw is already configured for ${config.owner}/${config.repo} (branch: ${config.branch}). All tools are ready to use.`,
+                    },
+                },
+            ],
+        };
+    }
+    return {
+        messages: [
+            {
+                role: "user",
+                content: {
+                    type: "text",
+                    text: "WebClaw is not configured yet. To connect your GitHub vault, I need:\n\n" +
+                        "1. **GitHub Personal Access Token** — Create one at https://github.com/settings/tokens with 'repo' scope\n" +
+                        "2. **Repository owner** — Your GitHub username or org\n" +
+                        "3. **Repository name** — The repo used as your vault\n" +
+                        "4. **Branch** — Usually 'main'\n\n" +
+                        "You can either:\n" +
+                        "- Set these in the plugin's environment variables (Connecteurs → webclaw → Modifier)\n" +
+                        "- Or tell me your credentials and I'll use the webclaw_setup tool\n\n" +
+                        "Please provide your GitHub token, repo owner, and repo name.",
+                },
+            },
+        ],
+    };
+});
 // === Helpers ===
 function buildTree(items, directory) {
     const filtered = directory
