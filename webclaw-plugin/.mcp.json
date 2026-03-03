@@ -2,8 +2,7 @@
   "mcpServers": {
     "webclaw": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/server/dist/index.js"],
-      "cwd": "${CLAUDE_PLUGIN_ROOT}/server"
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/dist/bundle.mjs"]
     }
   }
 }
