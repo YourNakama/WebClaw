@@ -29,7 +29,7 @@ function setCorsHeaders(res: ServerResponse): void {
 function createSession(): SessionEntry {
   const mcpServer = new McpServer({
     name: "webclaw",
-    version: "1.4.0",
+    version: "1.5.0",
   });
 
   const sessionState: SessionState = { config: null, octokit: null };
@@ -77,7 +77,7 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
     res.end(JSON.stringify({
       status: "ok",
       server: "webclaw-mcp",
-      version: "1.4.0",
+      version: "1.5.0",
       sessions: sessions.size,
     }));
     return;
@@ -118,7 +118,7 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 httpServer.listen(PORT, () => {
-  console.log(`WebClaw MCP remote server v1.4.0 listening on port ${PORT}`);
+  console.log(`WebClaw MCP remote server v1.5.0 listening on port ${PORT}`);
   console.log(`  MCP endpoint: http://localhost:${PORT}/mcp`);
   console.log(`  Health check: http://localhost:${PORT}/health`);
 });

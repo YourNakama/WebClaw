@@ -29,7 +29,9 @@ The plugin is pre-built and ready to use — no terminal, no build step.
 4. Enter `YourNakama/WebClaw`
 5. Install `webclaw` from the list
 
-Le plugin se connecte automatiquement au **serveur MCP distant** heberge sur Railway. La VM Cowork n'a pas besoin d'acces internet — c'est l'infrastructure Anthropic qui fait le pont vers le serveur externe.
+Le plugin se connecte automatiquement au **serveur MCP distant** (`mcp.webclaw.nakamacyber.ai`). La VM Cowork n'a pas besoin d'acces internet — c'est l'infrastructure Anthropic qui fait le pont vers le serveur externe.
+
+> **Acces reseau requis** : le domaine `mcp.webclaw.nakamacyber.ai` doit etre autorise dans votre configuration reseau. Sur un plan **Team ou Enterprise**, allez dans **Admin Settings → Capabilities** et ajoutez `mcp.webclaw.nakamacyber.ai` a la liste blanche des domaines autorises.
 
 > **Transparence** : le serveur distant execute exactement le code de ce repo public. Pas de build prive, pas de code cache. Tout est verifiable et auditable par n'importe qui. Voir la section [Security](#security).
 
@@ -40,6 +42,15 @@ Si vous preferez ajouter le MCP manuellement sans passer par le marketplace :
 **Claude Code :**
 ```bash
 claude mcp add --transport http webclaw https://mcp.webclaw.nakamacyber.ai/mcp
+```
+
+Pour autoriser le domaine dans Claude Code, ajoutez-le dans votre config (`~/.claude/settings.json` ou projet) :
+```json
+{
+  "permissions": {
+    "allowedUrls": ["mcp.webclaw.nakamacyber.ai"]
+  }
+}
 ```
 
 **Claude.ai / Cowork :** ajouter via l'interface des connecteurs MCP distants avec l'URL :
@@ -201,6 +212,17 @@ Same repo, same files, same GitHub history — terminal, browser, or remote, you
 - **Code public = code deploye** : le serveur MCP distant deploye sur Railway utilise exactement le code de ce repo public. Pas de build prive, pas de code cache. Tout est verifiable et auditable par n'importe qui
 - **Client ID public** : le `GITHUB_CLIENT_ID` est visible dans le code source (meme pattern que le CLI `gh` de GitHub). Ce n'est pas un secret — la securite repose sur l'autorisation explicite de l'utilisateur dans son navigateur
 - HTTPS fourni automatiquement par Railway (TLS)
+
+### Acces reseau
+
+Le plugin utilise un seul domaine externe : `mcp.webclaw.nakamacyber.ai`
+
+| Environnement | Configuration requise |
+|---|---|
+| **Claude Code** (local stdio) | Aucune — le serveur tourne sur votre machine |
+| **Claude Code** (remote HTTP) | Ajouter `mcp.webclaw.nakamacyber.ai` dans `permissions.allowedUrls` de votre `settings.json` |
+| **Cowork / Claude.ai** (Team/Enterprise) | Ajouter `mcp.webclaw.nakamacyber.ai` dans **Admin Settings → Capabilities** (liste blanche domaines) |
+| **Cowork / Claude.ai** (Free/Pro) | Aucune configuration reseau necessaire |
 
 ---
 

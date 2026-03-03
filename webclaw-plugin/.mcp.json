@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "webclaw": {
-      "type": "url",
+      "type": "http",
       "url": "https://mcp.webclaw.nakamacyber.ai/mcp"
     }
   }
