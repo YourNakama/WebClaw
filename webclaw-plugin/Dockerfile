@@ -8,7 +8,9 @@ RUN npx tsc
 RUN npx esbuild dist/remote.js --bundle --platform=node --target=node20 --format=esm --outfile=dist/remote.mjs --banner:js="import{createRequire}from'module';const require=createRequire(import.meta.url);"
 
 FROM node:20-alpine
+RUN addgroup -g 1001 -S nodejs && adduser -S webclaw -u 1001
 WORKDIR /app
 COPY --from=builder /app/dist/remote.mjs ./remote.mjs
+USER webclaw
 EXPOSE 3000
 CMD ["node", "remote.mjs"]

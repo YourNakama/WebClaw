@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 import type { Response } from "express";
 import type {
   OAuthServerProvider,
@@ -16,6 +16,13 @@ import type {
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23ctlK0eSRxyelzeNs";
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
 const SERVER_URL = process.env.SERVER_URL || "http://localhost:3000";
+
+// --- Map size limits (DoS protection) ---
+
+const MAX_CLIENTS = 1000;
+const MAX_PENDING_AUTHS = 500;
+const MAX_ISSUED_CODES = 500;
+const MAX_TOKEN_CACHE = 2000;
 
 // --- Internal types ---
 
@@ -39,10 +46,20 @@ interface CachedAuthInfo {
   expiresAt: number;
 }
 
+// --- Helpers ---
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
 // --- In-memory clients store (DCR) ---
 
 class InMemoryClientsStore implements OAuthRegisteredClientsStore {
   private clients = new Map<string, OAuthClientInformationFull>();
+
+  get size(): number {
+    return this.clients.size;
+  }
 
   async getClient(clientId: string): Promise<OAuthClientInformationFull | undefined> {
     return this.clients.get(clientId);
@@ -51,6 +68,10 @@ class InMemoryClientsStore implements OAuthRegisteredClientsStore {
   async registerClient(
     client: Omit<OAuthClientInformationFull, "client_id" | "client_id_issued_at">
   ): Promise<OAuthClientInformationFull> {
+    if (this.clients.size >= MAX_CLIENTS) {
+      throw new Error("Too many registered clients");
+    }
+
     const full: OAuthClientInformationFull = {
       ...client,
       client_id: `webclaw-${randomUUID()}`,
@@ -71,6 +92,14 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
   private cleanupTimer: ReturnType<typeof setInterval>;
 
   constructor() {
+    if (!GITHUB_CLIENT_SECRET) {
+      console.warn(
+        "[oauth] WARNING: GITHUB_CLIENT_SECRET is not set. " +
+        "OAuth token exchange with GitHub will fail. " +
+        "Set it in your environment variables."
+      );
+    }
+
     // Periodic cleanup every 60s
     this.cleanupTimer = setInterval(() => this.cleanup(), 60_000);
     this.cleanupTimer.unref();
@@ -87,6 +116,18 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
     params: AuthorizationParams,
     res: Response
   ): Promise<void> {
+    // Validate redirectUri against registered client URIs
+    const registeredUris = (client.redirect_uris || []).map((u) => String(u));
+    if (!registeredUris.includes(params.redirectUri)) {
+      res.status(400).json({ error: "redirect_uri does not match registered URIs" });
+      return;
+    }
+
+    if (this.pendingAuths.size >= MAX_PENDING_AUTHS) {
+      res.status(503).json({ error: "Server busy, try again later" });
+      return;
+    }
+
     const ourState = randomUUID();
 
     this.pendingAuths.set(ourState, {
@@ -111,24 +152,30 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
   async handleGitHubCallback(code: string, state: string, res: Response): Promise<void> {
     const pending = this.pendingAuths.get(state);
     if (!pending) {
-      res.status(400).json({ error: "Invalid or expired state" });
+      res.status(400).json({ error: "Invalid or expired authorization request" });
       return;
     }
     this.pendingAuths.delete(state);
 
     // Exchange code with GitHub using client_secret
-    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        client_id: GITHUB_CLIENT_ID,
-        client_secret: GITHUB_CLIENT_SECRET,
-        code,
-      }),
-    });
+    let tokenRes: globalThis.Response;
+    try {
+      tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: GITHUB_CLIENT_ID,
+          client_secret: GITHUB_CLIENT_SECRET,
+          code,
+        }),
+      });
+    } catch {
+      res.status(502).json({ error: "Failed to contact GitHub" });
+      return;
+    }
 
     if (!tokenRes.ok) {
       res.status(502).json({ error: "GitHub token exchange failed" });
@@ -137,10 +184,14 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
 
     const tokenData = (await tokenRes.json()) as Record<string, string>;
     if (tokenData.error) {
-      res.status(400).json({
-        error: tokenData.error,
-        error_description: tokenData.error_description,
-      });
+      // Sanitize: don't forward raw GitHub error details to client
+      console.error(`[oauth] GitHub token error: ${tokenData.error} — ${tokenData.error_description || ""}`);
+      res.status(400).json({ error: "Authorization failed" });
+      return;
+    }
+
+    if (this.issuedCodes.size >= MAX_ISSUED_CODES) {
+      res.status(503).json({ error: "Server busy, try again later" });
       return;
     }
 
@@ -166,12 +217,16 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
   // --- PKCE: return the stored code challenge for SDK validation ---
 
   async challengeForAuthorizationCode(
-    _client: OAuthClientInformationFull,
+    client: OAuthClientInformationFull,
     authorizationCode: string
   ): Promise<string> {
     const issued = this.issuedCodes.get(authorizationCode);
     if (!issued) {
       throw new Error("Unknown authorization code");
+    }
+    // Verify the code was issued to THIS client
+    if (issued.clientId !== client.client_id) {
+      throw new Error("Authorization code was not issued to this client");
     }
     return issued.codeChallenge;
   }
@@ -179,12 +234,16 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
   // --- Token exchange: return the GitHub token ---
 
   async exchangeAuthorizationCode(
-    _client: OAuthClientInformationFull,
+    client: OAuthClientInformationFull,
     authorizationCode: string
   ): Promise<OAuthTokens> {
     const issued = this.issuedCodes.get(authorizationCode);
     if (!issued) {
       throw new Error("Unknown or expired authorization code");
+    }
+    // Verify the code was issued to THIS client
+    if (issued.clientId !== client.client_id) {
+      throw new Error("Authorization code was not issued to this client");
     }
     this.issuedCodes.delete(authorizationCode);
 
@@ -197,42 +256,56 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
   // --- Refresh token: GitHub tokens don't expire, not supported ---
 
   async exchangeRefreshToken(): Promise<OAuthTokens> {
-    throw new Error("Refresh tokens are not supported. GitHub tokens do not expire.");
+    throw new Error("Refresh tokens are not supported");
   }
 
   // --- Verify access token: call GitHub API with 5-min cache ---
 
   async verifyAccessToken(token: string): Promise<AuthInfo> {
-    const cached = this.tokenCache.get(token);
+    const tokenHash = hashToken(token);
+    const cached = this.tokenCache.get(tokenHash);
     if (cached && Date.now() < cached.expiresAt) {
       return cached.authInfo;
     }
 
-    const res = await fetch("https://api.github.com/user", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json",
-      },
-    });
+    let apiRes: globalThis.Response;
+    try {
+      apiRes = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+        },
+      });
+    } catch {
+      throw new Error("Failed to verify token with GitHub");
+    }
 
-    if (!res.ok) {
+    if (!apiRes.ok) {
       throw new Error("Invalid GitHub token");
     }
 
-    const user = (await res.json()) as { login: string; id: number };
+    const user = (await apiRes.json()) as { login: string; id: number };
+
+    // expiresAt is REQUIRED by the MCP SDK bearerAuth middleware.
+    // GitHub tokens don't expire, so we set it to match our cache TTL (5 min).
+    // The token will be re-verified with GitHub after cache expiry.
+    const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
 
     const authInfo: AuthInfo = {
       token,
       clientId: "github",
       scopes: ["repo"],
+      expiresAt,
       extra: { login: user.login, userId: user.id },
     };
 
-    // Cache for 5 minutes
-    this.tokenCache.set(token, {
-      authInfo,
-      expiresAt: Date.now() + 5 * 60 * 1000,
-    });
+    // Cache keyed by hash (not raw token) for 5 minutes
+    if (this.tokenCache.size < MAX_TOKEN_CACHE) {
+      this.tokenCache.set(tokenHash, {
+        authInfo,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      });
+    }
 
     return authInfo;
   }

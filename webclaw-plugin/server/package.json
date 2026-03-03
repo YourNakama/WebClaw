@@ -1,6 +1,6 @@
 {
   "name": "@nakamacyber/webclaw-mcp",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "MCP server connecting Claude to markdown vaults on GitHub via WebClaw conventions",
   "type": "module",
   "main": "dist/bundle.mjs",

@@ -1,6 +1,6 @@
 import express from "express";
-import type { Request, Response } from "express";
-import { randomUUID } from "crypto";
+import type { Request, Response, NextFunction } from "express";
+import { randomUUID, createHash } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
@@ -16,6 +16,7 @@ interface SessionEntry {
   transport: StreamableHTTPServerTransport;
   server: McpServer;
   state: SessionState;
+  ownerHash: string; // SHA-256 of the GitHub token that created this session
 }
 
 const sessions = new Map<string, SessionEntry>();
@@ -25,12 +26,18 @@ const sessions = new Map<string, SessionEntry>();
 const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || "3000"}`;
 const provider = new GitHubOAuthProvider();
 
+// --- Helpers ---
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
 // --- Create a new MCP session ---
 
 function createSession(githubToken: string): SessionEntry {
   const mcpServer = new McpServer({
     name: "webclaw",
-    version: "1.6.0",
+    version: "1.6.1",
   });
 
   const octokit = createOctokit(githubToken);
@@ -47,15 +54,20 @@ function createSession(githubToken: string): SessionEntry {
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: (sessionId: string) => {
       sessions.set(sessionId, entry);
-      console.log(`[session] created: ${sessionId}`);
+      console.log("[session] created");
     },
     onsessionclosed: (sessionId: string) => {
       sessions.delete(sessionId);
-      console.log(`[session] closed: ${sessionId}`);
+      console.log("[session] closed");
     },
   });
 
-  const entry: SessionEntry = { transport, server: mcpServer, state: sessionState };
+  const entry: SessionEntry = {
+    transport,
+    server: mcpServer,
+    state: sessionState,
+    ownerHash: hashToken(githubToken),
+  };
   return entry;
 }
 
@@ -63,11 +75,18 @@ function createSession(githubToken: string): SessionEntry {
 
 const app = express();
 
-// JSON body parsing
-app.use(express.json());
+// JSON body parsing with size limit
+app.use(express.json({ limit: "100kb" }));
+
+// Security headers
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 // CORS middleware
-app.use((req: Request, res: Response, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader(
@@ -94,27 +113,43 @@ app.use(
 
 // GitHub OAuth callback (our server is the registered callback, not the client)
 app.get("/github/callback", async (req: Request, res: Response) => {
-  const code = req.query.code as string | undefined;
-  const state = req.query.state as string | undefined;
+  const { code, state } = req.query;
 
-  if (!code || !state) {
-    res.status(400).json({ error: "Missing code or state parameter" });
+  // Validate types (Express query params can be arrays)
+  if (typeof code !== "string" || typeof state !== "string" || !code || !state) {
+    res.status(400).json({ error: "Missing or invalid parameters" });
     return;
   }
 
-  await provider.handleGitHubCallback(code, state, res);
+  try {
+    await provider.handleGitHubCallback(code, state, res);
+  } catch {
+    res.status(500).json({ error: "Internal error" });
+  }
 });
 
 // MCP endpoint — protected by Bearer auth
-const bearerAuth = requireBearerAuth({ verifier: provider });
+// resourceMetadataUrl tells the client WHERE to discover OAuth endpoints on 401
+const bearerAuth = requireBearerAuth({
+  verifier: provider,
+  resourceMetadataUrl: `${SERVER_URL}/.well-known/oauth-protected-resource`,
+});
 
 app.all("/mcp", bearerAuth, async (req: Request, res: Response) => {
   const githubToken = req.auth!.token;
+  const tokenHash = hashToken(githubToken);
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
-  // Existing session: refresh octokit with current token
+  // Existing session: verify ownership, then refresh octokit
   if (sessionId && sessions.has(sessionId)) {
     const entry = sessions.get(sessionId)!;
+
+    // Session must belong to the same user (token hash match)
+    if (entry.ownerHash !== tokenHash) {
+      res.status(403).json({ error: "Session belongs to a different user" });
+      return;
+    }
+
     entry.state.octokit = createOctokit(githubToken);
     await entry.transport.handleRequest(req, res);
     return;
@@ -132,14 +167,19 @@ app.all("/mcp", bearerAuth, async (req: Request, res: Response) => {
   res.status(404).json({ error: "Session not found" });
 });
 
-// Health check
+// Health check (no sensitive info)
 app.get(["/health", "/"], (_req: Request, res: Response) => {
   res.json({
     status: "ok",
     server: "webclaw-mcp",
-    version: "1.6.0",
-    sessions: sessions.size,
+    version: "1.6.1",
   });
+});
+
+// Global error handler — never leak stack traces
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[error]", err.message);
+  res.status(500).json({ error: "Internal server error" });
 });
 
 // --- Start ---
@@ -147,8 +187,5 @@ app.get(["/health", "/"], (_req: Request, res: Response) => {
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 app.listen(PORT, () => {
-  console.log(`WebClaw MCP remote server v1.6.0 listening on port ${PORT}`);
-  console.log(`  MCP endpoint: ${SERVER_URL}/mcp`);
-  console.log(`  OAuth:        ${SERVER_URL}/.well-known/oauth-authorization-server`);
-  console.log(`  Health check: ${SERVER_URL}/health`);
+  console.log(`WebClaw MCP remote server v1.6.1 listening on port ${PORT}`);
 });

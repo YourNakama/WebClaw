@@ -32218,7 +32218,7 @@ var require_fast_content_type_parse = __commonJS({
 
 // dist/remote.js
 var import_express7 = __toESM(require_express2(), 1);
-import { randomUUID as randomUUID2 } from "crypto";
+import { randomUUID as randomUUID2, createHash as createHash3 } from "crypto";
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -49399,16 +49399,29 @@ function requireBearerAuth({ verifier, requiredScopes = [], resourceMetadataUrl 
 }
 
 // dist/oauth.js
-import { randomUUID } from "crypto";
+import { randomUUID, createHash as createHash2 } from "crypto";
 var GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23ctlK0eSRxyelzeNs";
 var GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
 var SERVER_URL = process.env.SERVER_URL || "http://localhost:3000";
+var MAX_CLIENTS = 1e3;
+var MAX_PENDING_AUTHS = 500;
+var MAX_ISSUED_CODES = 500;
+var MAX_TOKEN_CACHE = 2e3;
+function hashToken(token) {
+  return createHash2("sha256").update(token).digest("hex");
+}
 var InMemoryClientsStore = class {
   clients = /* @__PURE__ */ new Map();
+  get size() {
+    return this.clients.size;
+  }
   async getClient(clientId) {
     return this.clients.get(clientId);
   }
   async registerClient(client) {
+    if (this.clients.size >= MAX_CLIENTS) {
+      throw new Error("Too many registered clients");
+    }
     const full = {
       ...client,
       client_id: `webclaw-${randomUUID()}`,
@@ -49425,6 +49438,9 @@ var GitHubOAuthProvider = class {
   tokenCache = /* @__PURE__ */ new Map();
   cleanupTimer;
   constructor() {
+    if (!GITHUB_CLIENT_SECRET) {
+      console.warn("[oauth] WARNING: GITHUB_CLIENT_SECRET is not set. OAuth token exchange with GitHub will fail. Set it in your environment variables.");
+    }
     this.cleanupTimer = setInterval(() => this.cleanup(), 6e4);
     this.cleanupTimer.unref();
   }
@@ -49433,6 +49449,15 @@ var GitHubOAuthProvider = class {
   }
   // --- authorize: redirect user to GitHub ---
   async authorize(client, params, res) {
+    const registeredUris = (client.redirect_uris || []).map((u) => String(u));
+    if (!registeredUris.includes(params.redirectUri)) {
+      res.status(400).json({ error: "redirect_uri does not match registered URIs" });
+      return;
+    }
+    if (this.pendingAuths.size >= MAX_PENDING_AUTHS) {
+      res.status(503).json({ error: "Server busy, try again later" });
+      return;
+    }
     const ourState = randomUUID();
     this.pendingAuths.set(ourState, {
       clientId: client.client_id,
@@ -49452,32 +49477,40 @@ var GitHubOAuthProvider = class {
   async handleGitHubCallback(code, state, res) {
     const pending = this.pendingAuths.get(state);
     if (!pending) {
-      res.status(400).json({ error: "Invalid or expired state" });
+      res.status(400).json({ error: "Invalid or expired authorization request" });
       return;
     }
     this.pendingAuths.delete(state);
-    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        client_id: GITHUB_CLIENT_ID,
-        client_secret: GITHUB_CLIENT_SECRET,
-        code
-      })
-    });
+    let tokenRes;
+    try {
+      tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          client_id: GITHUB_CLIENT_ID,
+          client_secret: GITHUB_CLIENT_SECRET,
+          code
+        })
+      });
+    } catch {
+      res.status(502).json({ error: "Failed to contact GitHub" });
+      return;
+    }
     if (!tokenRes.ok) {
       res.status(502).json({ error: "GitHub token exchange failed" });
       return;
     }
     const tokenData = await tokenRes.json();
     if (tokenData.error) {
-      res.status(400).json({
-        error: tokenData.error,
-        error_description: tokenData.error_description
-      });
+      console.error(`[oauth] GitHub token error: ${tokenData.error} \u2014 ${tokenData.error_description || ""}`);
+      res.status(400).json({ error: "Authorization failed" });
+      return;
+    }
+    if (this.issuedCodes.size >= MAX_ISSUED_CODES) {
+      res.status(503).json({ error: "Server busy, try again later" });
       return;
     }
     const ourCode = randomUUID();
@@ -49495,18 +49528,24 @@ var GitHubOAuthProvider = class {
     res.redirect(redirectUrl.toString());
   }
   // --- PKCE: return the stored code challenge for SDK validation ---
-  async challengeForAuthorizationCode(_client, authorizationCode) {
+  async challengeForAuthorizationCode(client, authorizationCode) {
     const issued = this.issuedCodes.get(authorizationCode);
     if (!issued) {
       throw new Error("Unknown authorization code");
     }
+    if (issued.clientId !== client.client_id) {
+      throw new Error("Authorization code was not issued to this client");
+    }
     return issued.codeChallenge;
   }
   // --- Token exchange: return the GitHub token ---
-  async exchangeAuthorizationCode(_client, authorizationCode) {
+  async exchangeAuthorizationCode(client, authorizationCode) {
     const issued = this.issuedCodes.get(authorizationCode);
     if (!issued) {
       throw new Error("Unknown or expired authorization code");
+    }
+    if (issued.clientId !== client.client_id) {
+      throw new Error("Authorization code was not issued to this client");
     }
     this.issuedCodes.delete(authorizationCode);
     return {
@@ -49516,34 +49555,44 @@ var GitHubOAuthProvider = class {
   }
   // --- Refresh token: GitHub tokens don't expire, not supported ---
   async exchangeRefreshToken() {
-    throw new Error("Refresh tokens are not supported. GitHub tokens do not expire.");
+    throw new Error("Refresh tokens are not supported");
   }
   // --- Verify access token: call GitHub API with 5-min cache ---
   async verifyAccessToken(token) {
-    const cached2 = this.tokenCache.get(token);
+    const tokenHash = hashToken(token);
+    const cached2 = this.tokenCache.get(tokenHash);
     if (cached2 && Date.now() < cached2.expiresAt) {
       return cached2.authInfo;
     }
-    const res = await fetch("https://api.github.com/user", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json"
-      }
-    });
-    if (!res.ok) {
+    let apiRes;
+    try {
+      apiRes = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json"
+        }
+      });
+    } catch {
+      throw new Error("Failed to verify token with GitHub");
+    }
+    if (!apiRes.ok) {
       throw new Error("Invalid GitHub token");
     }
-    const user = await res.json();
+    const user = await apiRes.json();
+    const expiresAt = Math.floor(Date.now() / 1e3) + 5 * 60;
     const authInfo = {
       token,
       clientId: "github",
       scopes: ["repo"],
+      expiresAt,
       extra: { login: user.login, userId: user.id }
     };
-    this.tokenCache.set(token, {
-      authInfo,
-      expiresAt: Date.now() + 5 * 60 * 1e3
-    });
+    if (this.tokenCache.size < MAX_TOKEN_CACHE) {
+      this.tokenCache.set(tokenHash, {
+        authInfo,
+        expiresAt: Date.now() + 5 * 60 * 1e3
+      });
+    }
     return authInfo;
   }
   // --- Cleanup expired entries ---
@@ -54099,10 +54148,13 @@ ${extList}
 var sessions = /* @__PURE__ */ new Map();
 var SERVER_URL2 = process.env.SERVER_URL || `http://localhost:${process.env.PORT || "3000"}`;
 var provider = new GitHubOAuthProvider();
+function hashToken2(token) {
+  return createHash3("sha256").update(token).digest("hex");
+}
 function createSession(githubToken) {
   const mcpServer = new McpServer({
     name: "webclaw",
-    version: "1.6.0"
+    version: "1.6.1"
   });
   const octokit = createOctokit(githubToken);
   const sessionState = { config: null, octokit };
@@ -54113,18 +54165,28 @@ function createSession(githubToken) {
     sessionIdGenerator: () => randomUUID2(),
     onsessioninitialized: (sessionId) => {
       sessions.set(sessionId, entry);
-      console.log(`[session] created: ${sessionId}`);
+      console.log("[session] created");
     },
     onsessionclosed: (sessionId) => {
       sessions.delete(sessionId);
-      console.log(`[session] closed: ${sessionId}`);
+      console.log("[session] closed");
     }
   });
-  const entry = { transport, server: mcpServer, state: sessionState };
+  const entry = {
+    transport,
+    server: mcpServer,
+    state: sessionState,
+    ownerHash: hashToken2(githubToken)
+  };
   return entry;
 }
 var app = (0, import_express7.default)();
-app.use(import_express7.default.json());
+app.use(import_express7.default.json({ limit: "100kb" }));
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
@@ -54142,20 +54204,31 @@ app.use(mcpAuthRouter({
   serviceDocumentationUrl: new URL("https://webclaw.nakamacyber.ai")
 }));
 app.get("/github/callback", async (req, res) => {
-  const code = req.query.code;
-  const state = req.query.state;
-  if (!code || !state) {
-    res.status(400).json({ error: "Missing code or state parameter" });
+  const { code, state } = req.query;
+  if (typeof code !== "string" || typeof state !== "string" || !code || !state) {
+    res.status(400).json({ error: "Missing or invalid parameters" });
     return;
   }
-  await provider.handleGitHubCallback(code, state, res);
+  try {
+    await provider.handleGitHubCallback(code, state, res);
+  } catch {
+    res.status(500).json({ error: "Internal error" });
+  }
 });
-var bearerAuth = requireBearerAuth({ verifier: provider });
+var bearerAuth = requireBearerAuth({
+  verifier: provider,
+  resourceMetadataUrl: `${SERVER_URL2}/.well-known/oauth-protected-resource`
+});
 app.all("/mcp", bearerAuth, async (req, res) => {
   const githubToken = req.auth.token;
+  const tokenHash = hashToken2(githubToken);
   const sessionId = req.headers["mcp-session-id"];
   if (sessionId && sessions.has(sessionId)) {
     const entry = sessions.get(sessionId);
+    if (entry.ownerHash !== tokenHash) {
+      res.status(403).json({ error: "Session belongs to a different user" });
+      return;
+    }
     entry.state.octokit = createOctokit(githubToken);
     await entry.transport.handleRequest(req, res);
     return;
@@ -54172,16 +54245,16 @@ app.get(["/health", "/"], (_req, res) => {
   res.json({
     status: "ok",
     server: "webclaw-mcp",
-    version: "1.6.0",
-    sessions: sessions.size
+    version: "1.6.1"
   });
+});
+app.use((err, _req, res, _next) => {
+  console.error("[error]", err.message);
+  res.status(500).json({ error: "Internal server error" });
 });
 var PORT = parseInt(process.env.PORT || "3000", 10);
 app.listen(PORT, () => {
-  console.log(`WebClaw MCP remote server v1.6.0 listening on port ${PORT}`);
-  console.log(`  MCP endpoint: ${SERVER_URL2}/mcp`);
-  console.log(`  OAuth:        ${SERVER_URL2}/.well-known/oauth-authorization-server`);
-  console.log(`  Health check: ${SERVER_URL2}/health`);
+  console.log(`WebClaw MCP remote server v1.6.1 listening on port ${PORT}`);
 });
 /*! Bundled license information:
 

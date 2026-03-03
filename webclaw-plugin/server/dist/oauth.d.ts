@@ -13,8 +13,8 @@ export declare class GitHubOAuthProvider implements OAuthServerProvider {
     get clientsStore(): OAuthRegisteredClientsStore;
     authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response): Promise<void>;
     handleGitHubCallback(code: string, state: string, res: Response): Promise<void>;
-    challengeForAuthorizationCode(_client: OAuthClientInformationFull, authorizationCode: string): Promise<string>;
-    exchangeAuthorizationCode(_client: OAuthClientInformationFull, authorizationCode: string): Promise<OAuthTokens>;
+    challengeForAuthorizationCode(client: OAuthClientInformationFull, authorizationCode: string): Promise<string>;
+    exchangeAuthorizationCode(client: OAuthClientInformationFull, authorizationCode: string): Promise<OAuthTokens>;
     exchangeRefreshToken(): Promise<OAuthTokens>;
     verifyAccessToken(token: string): Promise<AuthInfo>;
     private cleanup;
