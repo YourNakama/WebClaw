@@ -5,7 +5,7 @@ RUN npm ci
 COPY server/tsconfig.json ./
 COPY server/src/ ./src/
 RUN npx tsc
-RUN npx esbuild dist/remote.js --bundle --platform=node --target=node20 --format=esm --outfile=dist/remote.mjs
+RUN npx esbuild dist/remote.js --bundle --platform=node --target=node20 --format=esm --outfile=dist/remote.mjs --banner:js="import{createRequire}from'module';const require=createRequire(import.meta.url);"
 
 FROM node:20-alpine
 WORKDIR /app

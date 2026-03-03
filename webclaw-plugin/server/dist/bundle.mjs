@@ -25082,6 +25082,19 @@ function registerTools(server2, getState, setState, options) {
     device_code: external_exports.string().optional().describe("Device code from step 1. Omit to start a new auth flow.")
   }, async ({ device_code }, extra) => {
     const state2 = getState();
+    if (options.isRemote && state2.octokit && !device_code) {
+      try {
+        const { data: user } = await state2.octokit.users.getAuthenticated();
+        return {
+          content: [{
+            type: "text",
+            text: `Already authenticated as **${user.login}** via MCP OAuth.
+` + (state2.config ? `Current vault: ${state2.config.owner}/${state2.config.repo}` : `Use **webclaw_select_repo** to choose your vault.`)
+          }]
+        };
+      } catch {
+      }
+    }
     const existingToken = options.isRemote ? state2.config?.token ?? null : options.loadTokenOnly?.() ?? null;
     if (existingToken && !device_code) {
       try {
@@ -25681,7 +25694,7 @@ if (state.config)
   state.octokit = createOctokit(state.config.token);
 var server = new McpServer({
   name: "webclaw",
-  version: "1.5.0"
+  version: "1.6.0"
 });
 server.prompt("webclaw_onboarding", "Guide the user through initial WebClaw setup when not configured", () => {
   if (state.config) {
@@ -25722,7 +25735,7 @@ registerTools(server, () => state, (patch) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("WebClaw MCP server v1.5.0 running on stdio");
+  console.error("WebClaw MCP server v1.6.0 running on stdio");
   if (!state.config) {
     console.error("\u26A0\uFE0F  No config found \u2014 use webclaw_connect to authenticate");
   }

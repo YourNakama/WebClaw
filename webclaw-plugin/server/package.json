@@ -1,6 +1,6 @@
 {
   "name": "@nakamacyber/webclaw-mcp",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "MCP server connecting Claude to markdown vaults on GitHub via WebClaw conventions",
   "type": "module",
   "main": "dist/bundle.mjs",
@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc && npm run bundle && npm run bundle:remote",
     "bundle": "esbuild dist/index.js --bundle --platform=node --target=node20 --format=esm --outfile=dist/bundle.mjs",
-    "bundle:remote": "esbuild dist/remote.js --bundle --platform=node --target=node20 --format=esm --outfile=dist/remote.mjs",
+    "bundle:remote": "esbuild dist/remote.js --bundle --platform=node --target=node20 --format=esm --outfile=dist/remote.mjs --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\"",
     "dev": "tsc --watch",
     "start": "node dist/bundle.mjs",
     "start:remote": "node dist/remote.mjs"
@@ -18,9 +18,11 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@octokit/rest": "^22.0.1",
+    "express": "^5.2.1",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "esbuild": "^0.27.3",
     "typescript": "^5.7.0"

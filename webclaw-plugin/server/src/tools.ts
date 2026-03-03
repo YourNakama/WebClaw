@@ -107,6 +107,24 @@ export function registerTools(
     async ({ device_code }, extra) => {
       const state = getState();
 
+      // In remote OAuth mode, auth is already handled by the Bearer middleware
+      if (options.isRemote && state.octokit && !device_code) {
+        try {
+          const { data: user } = await state.octokit.users.getAuthenticated();
+          return {
+            content: [{
+              type: "text" as const,
+              text: `Already authenticated as **${user.login}** via MCP OAuth.\n` +
+                (state.config
+                  ? `Current vault: ${state.config.owner}/${state.config.repo}`
+                  : `Use **webclaw_select_repo** to choose your vault.`),
+            }],
+          };
+        } catch {
+          // Token invalid — fall through to Device Flow
+        }
+      }
+
       // Check if already connected with a valid token
       const existingToken = options.isRemote
         ? state.config?.token ?? null

@@ -1,8 +1,13 @@
+import express from "express";
+import type { Request, Response } from "express";
+import { randomUUID } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { randomUUID } from "crypto";
-import { createServer, IncomingMessage, ServerResponse } from "http";
+import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
+import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
+import { GitHubOAuthProvider } from "./oauth.js";
 import { registerTools } from "./tools.js";
+import { createOctokit } from "./config.js";
 import type { SessionState } from "./types.js";
 
 // --- Per-session state ---
@@ -15,24 +20,21 @@ interface SessionEntry {
 
 const sessions = new Map<string, SessionEntry>();
 
-// --- CORS headers for Claude.ai / Cowork ---
+// --- OAuth provider ---
 
-function setCorsHeaders(res: ServerResponse): void {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Mcp-Protocol-Version");
-  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
-}
+const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || "3000"}`;
+const provider = new GitHubOAuthProvider();
 
 // --- Create a new MCP session ---
 
-function createSession(): SessionEntry {
+function createSession(githubToken: string): SessionEntry {
   const mcpServer = new McpServer({
     name: "webclaw",
-    version: "1.5.0",
+    version: "1.6.0",
   });
 
-  const sessionState: SessionState = { config: null, octokit: null };
+  const octokit = createOctokit(githubToken);
+  const sessionState: SessionState = { config: null, octokit };
 
   registerTools(
     mcpServer,
@@ -57,68 +59,96 @@ function createSession(): SessionEntry {
   return entry;
 }
 
-// --- HTTP server ---
+// --- Express app ---
 
-const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+const app = express();
 
-  setCorsHeaders(res);
+// JSON body parsing
+app.use(express.json());
 
-  // CORS preflight
+// CORS middleware
+app.use((req: Request, res: Response, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, Mcp-Session-Id, Mcp-Protocol-Version"
+  );
+  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
+
   if (req.method === "OPTIONS") {
-    res.writeHead(204);
-    res.end();
+    res.status(204).end();
+    return;
+  }
+  next();
+});
+
+// OAuth routes: /.well-known/*, /authorize, /token, /register
+app.use(
+  mcpAuthRouter({
+    provider,
+    issuerUrl: new URL(SERVER_URL),
+    serviceDocumentationUrl: new URL("https://webclaw.nakamacyber.ai"),
+  })
+);
+
+// GitHub OAuth callback (our server is the registered callback, not the client)
+app.get("/github/callback", async (req: Request, res: Response) => {
+  const code = req.query.code as string | undefined;
+  const state = req.query.state as string | undefined;
+
+  if (!code || !state) {
+    res.status(400).json({ error: "Missing code or state parameter" });
     return;
   }
 
-  // Health check
-  if (url.pathname === "/health" || url.pathname === "/") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      status: "ok",
-      server: "webclaw-mcp",
-      version: "1.5.0",
-      sessions: sessions.size,
-    }));
+  await provider.handleGitHubCallback(code, state, res);
+});
+
+// MCP endpoint — protected by Bearer auth
+const bearerAuth = requireBearerAuth({ verifier: provider });
+
+app.all("/mcp", bearerAuth, async (req: Request, res: Response) => {
+  const githubToken = req.auth!.token;
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+
+  // Existing session: refresh octokit with current token
+  if (sessionId && sessions.has(sessionId)) {
+    const entry = sessions.get(sessionId)!;
+    entry.state.octokit = createOctokit(githubToken);
+    await entry.transport.handleRequest(req, res);
     return;
   }
 
-  // MCP endpoint
-  if (url.pathname === "/mcp") {
-    const sessionId = req.headers["mcp-session-id"] as string | undefined;
-
-    // Try to find existing session
-    if (sessionId && sessions.has(sessionId)) {
-      const entry = sessions.get(sessionId)!;
-      await entry.transport.handleRequest(req, res);
-      return;
-    }
-
-    // New session (initialization request — POST without session ID, or with unknown session ID)
-    if (req.method === "POST") {
-      const entry = createSession();
-      await entry.server.connect(entry.transport);
-      await entry.transport.handleRequest(req, res);
-      return;
-    }
-
-    // GET or DELETE with unknown/missing session → 404
-    res.writeHead(404, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Session not found" }));
+  // New session (POST without session ID or unknown session ID)
+  if (req.method === "POST") {
+    const entry = createSession(githubToken);
+    await entry.server.connect(entry.transport);
+    await entry.transport.handleRequest(req, res);
     return;
   }
 
-  // 404 for anything else
-  res.writeHead(404, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ error: "Not found" }));
+  // GET or DELETE with unknown/missing session → 404
+  res.status(404).json({ error: "Session not found" });
+});
+
+// Health check
+app.get(["/health", "/"], (_req: Request, res: Response) => {
+  res.json({
+    status: "ok",
+    server: "webclaw-mcp",
+    version: "1.6.0",
+    sessions: sessions.size,
+  });
 });
 
 // --- Start ---
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
-httpServer.listen(PORT, () => {
-  console.log(`WebClaw MCP remote server v1.5.0 listening on port ${PORT}`);
-  console.log(`  MCP endpoint: http://localhost:${PORT}/mcp`);
-  console.log(`  Health check: http://localhost:${PORT}/health`);
+app.listen(PORT, () => {
+  console.log(`WebClaw MCP remote server v1.6.0 listening on port ${PORT}`);
+  console.log(`  MCP endpoint: ${SERVER_URL}/mcp`);
+  console.log(`  OAuth:        ${SERVER_URL}/.well-known/oauth-authorization-server`);
+  console.log(`  Health check: ${SERVER_URL}/health`);
 });

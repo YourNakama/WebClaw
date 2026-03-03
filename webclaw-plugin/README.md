@@ -60,12 +60,25 @@ https://mcp.webclaw.nakamacyber.ai/mcp
 
 ### First use — connect your vault
 
-On first use, Claude will detect that no vault is configured and guide you through the setup:
+**Mode remote (Cowork / Claude.ai) — MCP OAuth :**
 
-1. **`webclaw_connect`** — Opens your browser for GitHub authentication (OAuth Device Flow). No token to copy-paste.
-2. **`webclaw_select_repo`** — Lists your repositories so you can pick which one to use as your vault.
+L'authentification se fait automatiquement via le standard MCP OAuth. Quand vous utilisez un outil WebClaw pour la premiere fois, le client MCP (Claude Code, Cowork, Claude.ai) declenche le flow OAuth :
 
-En mode **local** (Claude Code stdio), la config est sauvegardee dans `~/.webclaw/config.json` (chmod 600). En mode **remote** (Cowork / Claude.ai), les tokens restent en memoire sur le serveur — rien n'est ecrit sur disque.
+1. Le client decouvre les endpoints OAuth via `/.well-known/oauth-authorization-server`
+2. Vous etes redirige vers GitHub pour autoriser l'application
+3. Le token GitHub est retourne au client via le protocole OAuth standard
+4. Tous les appels suivants incluent le token dans le header `Authorization: Bearer`
+
+Aucune action manuelle requise — pas de code a copier-coller, pas de Device Flow. L'auth survit aux pertes de session : meme si le serveur redemarre, le token est dans chaque requete HTTP.
+
+Apres l'auth, utilisez **`webclaw_select_repo`** pour choisir votre vault.
+
+**Mode local (Claude Code stdio) — Device Flow :**
+
+1. **`webclaw_connect`** — Ouvre votre navigateur pour l'authentification GitHub (OAuth Device Flow). Pas de token a copier-coller.
+2. **`webclaw_select_repo`** — Liste vos repos pour choisir lequel utiliser comme vault.
+
+La config est sauvegardee dans `~/.webclaw/config.json` (chmod 600).
 
 <details>
 <summary>Fallback: environment variables (optional)</summary>
@@ -100,7 +113,7 @@ The plugin exposes 12 tools to Claude via the Model Context Protocol:
 
 | Tool | Description |
 |------|-------------|
-| `webclaw_connect` | Authenticate with GitHub via Device Flow — opens browser, no token needed. |
+| `webclaw_connect` | Authenticate with GitHub. En mode remote, detecte l'auth OAuth automatique. En mode local, lance le Device Flow. |
 | `webclaw_select_repo` | List your repos or select one as your vault. |
 | `webclaw_list_files` | List files and directories (tree view) |
 | `webclaw_read_file` | Read file content with frontmatter parsing |
@@ -179,7 +192,7 @@ Claude: 🚀 Initialized vault with 10 starter files
                             (token, owner, repo, branch)
 ```
 
-**Mode remote (HTTP) — Claude.ai / Cowork / tout client MCP :**
+**Mode remote (HTTP + MCP OAuth) — Claude.ai / Cowork / tout client MCP :**
 
 ```
 ┌─────────────────────┐     ┌──────────────────┐     ┌────────────┐
@@ -187,16 +200,30 @@ Claude: 🚀 Initialized vault with 10 starter files
 │  Claude Cowork      │────▶│   Remote Server  │────▶│    API     │
 │  Claude Code        │HTTPS│   (Railway)      │     │ (your repo)│
 └─────────────────────┘     └──────────────────┘     └────────────┘
-                                     │
-                              Tokens en memoire
-                              (session ephemere)
+         │                          │
+  Authorization: Bearer       OAuth Provider
+  (token dans chaque          (proxy GitHub)
+   requete HTTP)
+```
+
+**Flow OAuth du mode remote :**
+
+```
+Client → POST /mcp                        → 401 Unauthorized
+Client → GET /.well-known/oauth-*         → decouvre les endpoints
+Client → POST /register (DCR)             → obtient un client_id
+Client → GET /authorize                   → redirige vers GitHub
+User   → autorise sur GitHub              → GitHub redirige vers /github/callback
+Server → echange code+secret avec GitHub  → redirige vers le callback du client
+Client → POST /token                      → recoit le token GitHub
+Client → POST /mcp + Authorization:Bearer → TOUS les appels suivants ont le token
 ```
 
 - **Your vault** = a GitHub repo with markdown files
 - **This plugin** = an MCP server that reads/writes via the GitHub API
 - **WebClaw** = the browser app for the same vault (visual editing, Dashboard, Task Panel)
-- **Mode local** : le serveur tourne sur votre machine, token stocke en local
-- **Mode remote** : le serveur tourne sur Railway, chaque utilisateur = une session en memoire
+- **Mode local** : le serveur tourne sur votre machine, token stocke en local via Device Flow
+- **Mode remote** : le serveur utilise MCP OAuth. Le token GitHub voyage dans chaque requete HTTP (`Authorization: Bearer`). Meme si le serveur perd la session, l'auth survit au prochain appel.
 
 Same repo, same files, same GitHub history — terminal, browser, or remote, your choice.
 
@@ -204,14 +231,15 @@ Same repo, same files, same GitHub history — terminal, browser, or remote, you
 
 ## Security
 
-- **OAuth Device Flow** — authenticate via browser, no token to copy-paste or store in env vars
-- **Mode local** : token stocke dans `~/.webclaw/config.json` (chmod 600) — jamais envoye ailleurs que l'API GitHub
-- **Mode remote** : tokens en memoire cote serveur uniquement, jamais persistes sur disque. Un restart du serveur efface toutes les sessions
+- **Mode remote — MCP OAuth** : l'authentification utilise le standard OAuth 2.1 (RFC 6749 / MCP spec). Le token GitHub est obtenu via un flow OAuth classique (code + secret cote serveur) et voyage dans le header `Authorization: Bearer` a chaque requete. Pas de session cote serveur pour l'auth — le token est dans la requete.
+- **Mode local — Device Flow** : authentification via navigateur, pas de token a copier-coller ou stocker dans des env vars. Token dans `~/.webclaw/config.json` (chmod 600).
 - No telemetry, no analytics
 - Every write operation creates a GitHub commit — full audit trail
 - **Code public = code deploye** : le serveur MCP distant deploye sur Railway utilise exactement le code de ce repo public. Pas de build prive, pas de code cache. Tout est verifiable et auditable par n'importe qui
 - **Client ID public** : le `GITHUB_CLIENT_ID` est visible dans le code source (meme pattern que le CLI `gh` de GitHub). Ce n'est pas un secret — la securite repose sur l'autorisation explicite de l'utilisateur dans son navigateur
+- **Client Secret** : le `GITHUB_CLIENT_SECRET` est stocke cote serveur uniquement (variable d'environnement Railway). Il n'est jamais expose au client. C'est le secret de l'OAuth App GitHub qui permet d'echanger les authorization codes contre des tokens.
 - HTTPS fourni automatiquement par Railway (TLS)
+- **PKCE** : le flow OAuth utilise PKCE (Proof Key for Code Exchange) pour prevenir les attaques d'interception de code. Le SDK MCP gere automatiquement la validation code_verifier/code_challenge.
 
 ### Acces reseau
 
@@ -226,29 +254,96 @@ Le plugin utilise un seul domaine externe : `mcp.webclaw.nakamacyber.ai`
 
 ---
 
-## Self-hosting (Railway)
+## Hebergement — Railway
 
-Vous pouvez deployer votre propre instance du serveur MCP distant. Le Dockerfile est inclus dans le repo.
+Le serveur MCP distant est heberge sur [Railway](https://railway.com) via un Dockerfile. Voici comment tout est configure, de A a Z.
 
-**Deploy sur Railway :**
+### 1. GitHub OAuth App
+
+Le serveur a besoin d'une **GitHub OAuth App** (pas une GitHub App) pour authentifier les utilisateurs.
+
+**Creer l'OAuth App :**
+
+1. Aller sur [github.com/settings/developers](https://github.com/settings/developers) → **OAuth Apps** → **New OAuth App**
+2. Remplir :
+   - **Application name** : `WebClaw MCP` (ou ce que vous voulez)
+   - **Homepage URL** : `https://webclaw.nakamacyber.ai`
+   - **Authorization callback URL** : `https://mcp.webclaw.nakamacyber.ai/github/callback`
+3. Cliquer **Register application**
+4. Noter le **Client ID** (visible directement)
+5. Cliquer **Generate a new client secret** et le noter immediatement (il ne sera plus visible apres)
+
+> **Pourquoi un callback fixe ?** GitHub n'accepte qu'UN seul callback URL par OAuth App. Notre serveur recoit le callback de GitHub, echange le code contre un token, puis redirige vers le client MCP (Cowork, Claude.ai, etc.) avec notre propre authorization code. Ca marche avec n'importe quel client MCP.
+
+### 2. Deploiement Railway
 
 1. Creer un nouveau service depuis le repo GitHub `YourNakama/WebClaw`
 2. Dans **Settings** du service :
    - **Root Directory** : `webclaw-plugin`
    - **Builder** : `Dockerfile` (pas Railpack)
-3. Variables d'environnement (optionnel) :
-   - `GITHUB_CLIENT_ID` — pour utiliser votre propre OAuth App GitHub
-   - `PORT` — fourni automatiquement par Railway
-4. Deploy — Railway build et deploie automatiquement a chaque push
+3. Railway build et deploie automatiquement a chaque push sur le repo
 
-Le Dockerfile utilise un **multi-stage build** : compilation TypeScript + bundling esbuild dans un premier stage, puis une image finale ultra-legere (Node Alpine + un seul fichier `remote.mjs`).
+### 3. Variables d'environnement Railway
+
+| Variable | Requis | Description |
+|----------|--------|-------------|
+| `PORT` | Auto | Fourni automatiquement par Railway |
+| `SERVER_URL` | Oui | URL publique du serveur, ex: `https://mcp.webclaw.nakamacyber.ai` |
+| `GITHUB_CLIENT_ID` | Oui | Client ID de l'OAuth App GitHub (ex: `Ov23ctlK0eSRxyelzeNs`) |
+| `GITHUB_CLIENT_SECRET` | Oui | Client Secret de l'OAuth App GitHub |
+
+> **Note** : si `GITHUB_CLIENT_ID` n'est pas defini, le serveur utilise le client ID par defaut embarque dans le code (`Ov23ctlK0eSRxyelzeNs`). Pour la production, utilisez votre propre OAuth App.
+
+### 4. Domaine custom (optionnel)
+
+Sur Railway, vous pouvez attacher un domaine custom :
+1. **Settings** → **Networking** → **Custom Domain**
+2. Ajouter `mcp.webclaw.nakamacyber.ai`
+3. Configurer le CNAME DNS chez votre registrar vers le domaine Railway
+
+### 5. Architecture du Dockerfile
+
+Le Dockerfile utilise un **multi-stage build** :
+
+```dockerfile
+# Stage 1 : build TypeScript + bundle esbuild
+FROM node:20-alpine AS builder
+# npm ci, tsc, esbuild → remote.mjs
+
+# Stage 2 : runtime ultra-leger
+FROM node:20-alpine
+COPY --from=builder /app/dist/remote.mjs ./remote.mjs
+CMD ["node", "remote.mjs"]
+```
+
+Image finale : ~60 MB (Node Alpine + un seul fichier JS). Pas de `node_modules` a runtime (tout est bundle).
+
+### 6. Endpoints du serveur
+
+| Endpoint | Methode | Description |
+|----------|---------|-------------|
+| `/health` | GET | Health check — retourne `{"status":"ok","version":"1.6.0","sessions":N}` |
+| `/.well-known/oauth-authorization-server` | GET | Metadata OAuth (decouverte des endpoints) |
+| `/.well-known/oauth-protected-resource` | GET | Metadata de la ressource protegee |
+| `/register` | POST | Dynamic Client Registration (DCR) |
+| `/authorize` | GET | Debut du flow OAuth → redirige vers GitHub |
+| `/github/callback` | GET | Callback OAuth GitHub → echange code, redirige vers le client |
+| `/token` | POST | Echange authorization code → token |
+| `/mcp` | POST/GET/DELETE | Endpoint MCP protege par `Authorization: Bearer` |
+
+### 7. Tester en local
 
 ```bash
-# Tester en local
 cd webclaw-plugin/server
 npm install && npm run build
+
+# Definir les variables (utiliser votre propre OAuth App ou celle par defaut)
+export SERVER_URL=http://localhost:3000
+export GITHUB_CLIENT_SECRET=your_secret_here
+
 npm run start:remote
-# → http://localhost:3000/mcp
+# → http://localhost:3000/health
+# → http://localhost:3000/.well-known/oauth-authorization-server
 ```
 
 ---
@@ -281,8 +376,8 @@ This plugin is distributed as a pre-built artifact — no `npm install` or build
 | MCP server config | `.mcp.json` — remote HTTP (serveur Railway) |
 | No reserved marketplace names | `webclaw-marketplace` |
 | Valid category | `productivity` |
-| Starts without config | Yes — `webclaw_connect` tool available |
-| Cowork compatible | Yes — serveur externe, pas besoin d'internet dans la VM |
+| Starts without config | Yes — auth via MCP OAuth (remote) ou `webclaw_connect` (local) |
+| Cowork compatible | Yes — serveur externe + MCP OAuth standard |
 
 ---
 
