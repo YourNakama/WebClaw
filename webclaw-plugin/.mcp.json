@@ -2,7 +2,7 @@
   "mcpServers": {
     "webclaw": {
       "type": "url",
-      "url": "https://webclaw-production-755c.up.railway.app/mcp"
+      "url": "https://mcp.webclaw.nakamacyber.ai/mcp"
     }
   }
 }

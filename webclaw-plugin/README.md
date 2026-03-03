@@ -39,12 +39,12 @@ Si vous preferez ajouter le MCP manuellement sans passer par le marketplace :
 
 **Claude Code :**
 ```bash
-claude mcp add --transport http webclaw https://webclaw-production-755c.up.railway.app/mcp
+claude mcp add --transport http webclaw https://mcp.webclaw.nakamacyber.ai/mcp
 ```
 
 **Claude.ai / Cowork :** ajouter via l'interface des connecteurs MCP distants avec l'URL :
 ```
-https://webclaw-production-755c.up.railway.app/mcp
+https://mcp.webclaw.nakamacyber.ai/mcp
 ```
 
 ### First use — connect your vault
