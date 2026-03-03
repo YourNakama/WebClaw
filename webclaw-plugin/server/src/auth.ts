@@ -7,7 +7,7 @@ import type { DeviceCodeResponse, OAuthTokenResponse } from "./types.js";
 // identifier that tells GitHub which app is requesting access.
 // Security is ensured by the user explicitly authorizing in their browser,
 // not by hiding this value. See: https://github.com/cli/oauth/issues/1
-export const GITHUB_CLIENT_ID = "Ov23ctlK0eSRxyelzeNs";
+export const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23ctlK0eSRxyelzeNs";
 
 export async function requestDeviceCode(): Promise<DeviceCodeResponse> {
   const res = await fetch("https://github.com/login/device/code", {
