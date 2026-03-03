@@ -54,6 +54,24 @@ export async function getFileSha(octokit, owner, repo, path) {
     }
     return data.sha;
 }
+// === User Repos ===
+export async function listUserRepos(octokit, limit = 30, type = "all") {
+    const { data } = await octokit.repos.listForAuthenticatedUser({
+        type,
+        sort: "updated",
+        direction: "desc",
+        per_page: Math.min(limit, 100),
+    });
+    return data.map((r) => ({
+        name: r.name,
+        full_name: r.full_name,
+        owner: r.owner.login,
+        private: r.private,
+        default_branch: r.default_branch,
+        description: r.description,
+        updated_at: r.updated_at ?? "",
+    }));
+}
 // === File History ===
 export async function getFileHistory(octokit, owner, repo, path, perPage = 30) {
     const { data } = await octokit.repos.listCommits({
@@ -69,4 +87,3 @@ export async function getFileHistory(octokit, owner, repo, path, perPage = 30) {
         date: c.commit.author?.date ?? "",
     }));
 }
-//# sourceMappingURL=github.js.map

@@ -8,4 +8,3 @@ export declare function parseFrontmatter(content: string): VaultFrontmatter | un
  * Extract just the tags array from content.
  */
 export declare function extractTags(content: string): string[];
-//# sourceMappingURL=frontmatter.d.ts.map

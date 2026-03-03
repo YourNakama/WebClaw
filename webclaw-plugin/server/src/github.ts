@@ -1,5 +1,5 @@
 import { Octokit } from "@octokit/rest";
-import type { GitHubFile, GitHubTreeItem } from "./types.js";
+import type { GitHubFile, GitHubTreeItem, GitHubUserRepo } from "./types.js";
 
 // === File Tree Operations ===
 
@@ -98,6 +98,31 @@ export async function getFileSha(
     throw new Error(`${path} is not a file`);
   }
   return data.sha;
+}
+
+// === User Repos ===
+
+export async function listUserRepos(
+  octokit: Octokit,
+  limit = 30,
+  type: "all" | "owner" | "public" | "private" | "member" = "all"
+): Promise<GitHubUserRepo[]> {
+  const { data } = await octokit.repos.listForAuthenticatedUser({
+    type,
+    sort: "updated",
+    direction: "desc",
+    per_page: Math.min(limit, 100),
+  });
+
+  return data.map((r) => ({
+    name: r.name,
+    full_name: r.full_name,
+    owner: r.owner.login,
+    private: r.private,
+    default_branch: r.default_branch,
+    description: r.description,
+    updated_at: r.updated_at ?? "",
+  }));
 }
 
 // === File History ===

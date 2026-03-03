@@ -20,6 +20,39 @@ export interface GitHubTreeItem {
   url: string;
 }
 
+// === OAuth Device Flow Types ===
+
+export interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  expires_in: number;
+  interval: number;
+}
+
+export interface OAuthTokenResponse {
+  access_token: string;
+  token_type: string;
+  scope: string;
+}
+
+export interface OAuthErrorResponse {
+  error: string;
+  error_description: string;
+}
+
+// === GitHub User Repo ===
+
+export interface GitHubUserRepo {
+  name: string;
+  full_name: string;
+  owner: string;
+  private: boolean;
+  default_branch: string;
+  description: string | null;
+  updated_at: string;
+}
+
 // === Vault Types ===
 
 export interface VaultConfig {
@@ -27,6 +60,7 @@ export interface VaultConfig {
   owner: string;
   repo: string;
   branch: string;
+  auth_method?: "oauth_device_flow" | "pat" | "env";
 }
 
 export interface VaultFile {

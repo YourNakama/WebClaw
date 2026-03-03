@@ -8,4 +8,3 @@ export declare function extractTasks(content: string, filePath: string, tags: st
  * Toggles a checkbox at a specific line in content.
  */
 export declare function toggleTaskInContent(content: string, lineNumber: number): string;
-//# sourceMappingURL=tasks.d.ts.map

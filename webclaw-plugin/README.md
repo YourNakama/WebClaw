@@ -31,31 +31,23 @@ The plugin is pre-built and ready to use — no terminal, no build step.
 
 ### First use — connect your vault
 
-On first use, Claude will detect that no vault is configured and ask you directly in the conversation:
+On first use, Claude will detect that no vault is configured and guide you through the setup:
 
-> *"To connect your vault, I need your GitHub token, repo owner, and repo name."*
+1. **`webclaw_connect`** — Opens your browser for GitHub authentication (OAuth Device Flow). No token to copy-paste.
+2. **`webclaw_select_repo`** — Lists your repositories so you can pick which one to use as your vault.
 
-You reply in the chat — Claude calls `webclaw_setup` — config is saved to `~/.webclaw/config.json`. No terminal needed. Works in both Claude Code and Cowork.
-
-Alternatively, you can configure manually:
+Config is saved to `~/.webclaw/config.json` (chmod 600). No terminal needed. Works in both Claude Code and Cowork.
 
 <details>
-<summary>Manual setup (environment variables)</summary>
+<summary>Fallback: environment variables (optional)</summary>
+
+Environment variables still work as a fallback if you prefer manual configuration:
 
 ```bash
 export WEBCLAW_GITHUB_TOKEN="ghp_..."
 export WEBCLAW_OWNER="your-username"
 export WEBCLAW_REPO="your-vault-repo"
 export WEBCLAW_BRANCH="main"
-```
-
-</details>
-
-<details>
-<summary>Manual setup (setup wizard — Claude Code only)</summary>
-
-```bash
-bash webclaw-plugin/scripts/setup.sh
 ```
 
 </details>
@@ -73,13 +65,14 @@ claude --plugin-dir ../
 
 ---
 
-## Tools (11 MCP tools)
+## Tools (12 MCP tools)
 
-The plugin exposes 11 tools to Claude via the Model Context Protocol:
+The plugin exposes 12 tools to Claude via the Model Context Protocol:
 
 | Tool | Description |
 |------|-------------|
-| `webclaw_setup` | Configure your vault (GitHub token, repo). Interactive — works in chat. |
+| `webclaw_connect` | Authenticate with GitHub via Device Flow — opens browser, no token needed. |
+| `webclaw_select_repo` | List your repos or select one as your vault. |
 | `webclaw_list_files` | List files and directories (tree view) |
 | `webclaw_read_file` | Read file content with frontmatter parsing |
 | `webclaw_create_file` | Create a new file (commits to GitHub) |
@@ -164,7 +157,8 @@ Same repo, same files, same GitHub history — terminal or browser, your choice.
 
 ## Security
 
-- GitHub token stored locally in `~/.webclaw/config.json` (chmod 600) — never sent anywhere except GitHub API
+- **OAuth Device Flow** — authenticate via browser, no token to copy-paste or store in env vars
+- Token stored locally in `~/.webclaw/config.json` (chmod 600) — never sent anywhere except GitHub API
 - No telemetry, no analytics, no server-side processing
 - Every write operation creates a GitHub commit — full audit trail
 - The MCP server runs on your machine via stdio — no network server exposed
@@ -199,7 +193,7 @@ This plugin is distributed as a pre-built artifact — no `npm install` or build
 | MCP server config | `.mcp.json` with `${CLAUDE_PLUGIN_ROOT}` |
 | No reserved marketplace names | `webclaw-marketplace` |
 | Valid category | `productivity` |
-| Starts without config | Yes — `webclaw_setup` tool available |
+| Starts without config | Yes — `webclaw_connect` tool available |
 
 ---
 

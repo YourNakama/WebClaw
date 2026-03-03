@@ -16,11 +16,37 @@ export interface GitHubTreeItem {
     size?: number;
     url: string;
 }
+export interface DeviceCodeResponse {
+    device_code: string;
+    user_code: string;
+    verification_uri: string;
+    expires_in: number;
+    interval: number;
+}
+export interface OAuthTokenResponse {
+    access_token: string;
+    token_type: string;
+    scope: string;
+}
+export interface OAuthErrorResponse {
+    error: string;
+    error_description: string;
+}
+export interface GitHubUserRepo {
+    name: string;
+    full_name: string;
+    owner: string;
+    private: boolean;
+    default_branch: string;
+    description: string | null;
+    updated_at: string;
+}
 export interface VaultConfig {
     token: string;
     owner: string;
     repo: string;
     branch: string;
+    auth_method?: "oauth_device_flow" | "pat" | "env";
 }
 export interface VaultFile {
     name: string;
@@ -52,4 +78,3 @@ export interface TaskItem {
     completed: boolean;
     tags: string[];
 }
-//# sourceMappingURL=types.d.ts.map

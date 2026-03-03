@@ -67,4 +67,3 @@ export function extractTags(content) {
         return [];
     return Array.isArray(fm.tags) ? fm.tags : [];
 }
-//# sourceMappingURL=frontmatter.js.map

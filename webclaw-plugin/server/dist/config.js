@@ -5,7 +5,7 @@ import { Octokit } from "@octokit/rest";
 const CONFIG_PATH = join(homedir(), ".webclaw", "config.json");
 /**
  * Try to load config. Returns null if not configured yet
- * (instead of throwing, so the server can still start and expose webclaw_setup).
+ * (instead of throwing, so the server can still start and expose webclaw_connect).
  */
 export function tryLoadConfig() {
     // Environment variables take precedence
@@ -55,10 +55,54 @@ export function saveConfig(config) {
         mode: 0o600,
     });
 }
+/**
+ * Save just the token (and auth_method) to ~/.webclaw/config.json.
+ * Preserves existing owner/repo/branch if present.
+ */
+export function saveToken(token, authMethod) {
+    const dir = dirname(CONFIG_PATH);
+    if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
+    }
+    let existing = {};
+    if (existsSync(CONFIG_PATH)) {
+        try {
+            existing = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+        }
+        catch {
+            // Ignore corrupt config
+        }
+    }
+    const merged = { ...existing, token, auth_method: authMethod };
+    writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2), {
+        encoding: "utf-8",
+        mode: 0o600,
+    });
+}
+/**
+ * Load just the token from env vars or config file.
+ * Used between auth and repo selection — doesn't require owner/repo.
+ */
+export function loadTokenOnly() {
+    // Environment variables take precedence
+    const envToken = process.env.WEBCLAW_GITHUB_TOKEN || process.env.GITHUB_TOKEN;
+    if (envToken)
+        return envToken;
+    // Fall back to config file
+    if (!existsSync(CONFIG_PATH))
+        return null;
+    try {
+        const raw = readFileSync(CONFIG_PATH, "utf-8");
+        const parsed = JSON.parse(raw);
+        return parsed.token || null;
+    }
+    catch {
+        return null;
+    }
+}
 export function getConfigPath() {
     return CONFIG_PATH;
 }
 export function createOctokit(token) {
     return new Octokit({ auth: token });
 }
-//# sourceMappingURL=config.js.map

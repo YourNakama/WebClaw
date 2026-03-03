@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { tryLoadConfig, saveConfig, getConfigPath, createOctokit } from "./config.js";
+import { tryLoadConfig, saveConfig, saveToken, loadTokenOnly, getConfigPath, createOctokit } from "./config.js";
 import {
   getRepoTree,
   getFileContent,
@@ -11,13 +11,15 @@ import {
   deleteFile,
   getFileSha,
   getFileHistory,
+  listUserRepos,
 } from "./github.js";
+import { requestDeviceCode, pollForAccessToken, openBrowser } from "./auth.js";
 import { parseFrontmatter, extractTags } from "./frontmatter.js";
 import { extractTasks } from "./tasks.js";
 import type { VaultConfig, VaultFile, GitHubTreeItem } from "./types.js";
 import { Octokit } from "@octokit/rest";
 
-// --- Mutable state: config can be set at runtime via webclaw_setup ---
+// --- Mutable state: config can be set at runtime via webclaw_connect + webclaw_select_repo ---
 let config: VaultConfig | null = tryLoadConfig();
 let octokit: Octokit | null = config ? createOctokit(config.token) : null;
 
@@ -25,8 +27,7 @@ function requireConfig(): { octokit: Octokit; owner: string; repo: string; branc
   if (!config || !octokit) {
     throw new Error(
       "WebClaw is not configured yet. " +
-      "Please use the webclaw_setup tool first to connect your GitHub vault.\n\n" +
-      "I need: your GitHub token, repo owner, repo name, and branch."
+      "Use webclaw_connect to authenticate with GitHub, then webclaw_select_repo to choose your vault."
     );
   }
   return { octokit, owner: config.owner, repo: config.repo, branch: config.branch };
@@ -34,7 +35,7 @@ function requireConfig(): { octokit: Octokit; owner: string; repo: string; branc
 
 const server = new McpServer({
   name: "webclaw",
-  version: "1.0.0",
+  version: "2.0.0",
 });
 
 // === Prompts ===
@@ -64,15 +65,10 @@ server.prompt(
           content: {
             type: "text" as const,
             text:
-              "WebClaw is not configured yet. To connect your GitHub vault, I need:\n\n" +
-              "1. **GitHub Personal Access Token** — Create one at https://github.com/settings/tokens with 'repo' scope\n" +
-              "2. **Repository owner** — Your GitHub username or org\n" +
-              "3. **Repository name** — The repo used as your vault\n" +
-              "4. **Branch** — Usually 'main'\n\n" +
-              "You can either:\n" +
-              "- Set these in the plugin's environment variables (Connecteurs → webclaw → Modifier)\n" +
-              "- Or tell me your credentials and I'll use the webclaw_setup tool\n\n" +
-              "Please provide your GitHub token, repo owner, and repo name.",
+              "WebClaw is not configured yet. To connect your GitHub vault:\n\n" +
+              "1. Use **webclaw_connect** — I'll open your browser for GitHub authentication (no token needed)\n" +
+              "2. Use **webclaw_select_repo** — Choose which repo to use as your vault\n\n" +
+              "Say 'connect my vault' to get started!",
           },
         },
       ],
@@ -131,79 +127,213 @@ function formatTree(files: VaultFile[], indent = ""): string {
   return out;
 }
 
-// === Tool 0: webclaw_setup ===
+// === Tool 0: webclaw_connect ===
 
 server.tool(
-  "webclaw_setup",
-  "Configure WebClaw with your GitHub vault credentials. Creates ~/.webclaw/config.json. This is required before using any other WebClaw tool.",
-  {
-    token: z
-      .string()
-      .describe(
-        "GitHub Personal Access Token with 'repo' scope. Create one at https://github.com/settings/tokens"
-      ),
-    owner: z.string().describe("GitHub username or organization that owns the vault repo"),
-    repo: z.string().describe("GitHub repository name used as your vault"),
-    branch: z
-      .string()
-      .optional()
-      .default("main")
-      .describe("Branch to use (default: main)"),
-  },
-  async ({ token, owner, repo, branch }) => {
-    // Validate the credentials by testing the API
-    const testOctokit = createOctokit(token);
-    try {
-      await testOctokit.repos.get({ owner, repo });
-    } catch (err: unknown) {
-      const status = err instanceof Error && "status" in err
-        ? (err as { status: number }).status
-        : 0;
-      if (status === 401) {
+  "webclaw_connect",
+  "Authenticate with GitHub using Device Flow. Opens your browser — no token needed. Run this before webclaw_select_repo.",
+  {},
+  async (_params, extra) => {
+    // Check if already connected with a valid token
+    const existingToken = loadTokenOnly();
+    if (existingToken) {
+      try {
+        const testOctokit = createOctokit(existingToken);
+        const { data: user } = await testOctokit.users.getAuthenticated();
+        // Token is valid — already connected
+        if (!octokit) octokit = testOctokit;
         return {
           content: [
             {
               type: "text" as const,
               text:
-                "❌ Invalid GitHub token. Make sure your token has the 'repo' scope.\n" +
-                "Create one at: https://github.com/settings/tokens",
+                `Already connected as **${user.login}**.\n\n` +
+                (config
+                  ? `Current vault: ${config.owner}/${config.repo} (${config.branch})\nAll tools are ready.`
+                  : `Use **webclaw_select_repo** to choose your vault.`),
             },
           ],
         };
+      } catch {
+        // Token invalid — proceed with Device Flow
       }
-      if (status === 404) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `❌ Repository ${owner}/${repo} not found. Check the owner and repo name, and make sure your token has access.`,
-            },
-          ],
-        };
-      }
-      throw err;
     }
 
-    // Save config
-    const newConfig: VaultConfig = { token, owner, repo, branch: branch || "main" };
-    saveConfig(newConfig);
+    // Start Device Flow
+    const deviceCode = await requestDeviceCode();
 
-    // Activate in current session
-    config = newConfig;
-    octokit = testOctokit;
+    // Open browser
+    openBrowser(deviceCode.verification_uri);
+
+    // Poll for token (blocking, respects MCP abort signal)
+    const tokenResponse = await pollForAccessToken(
+      deviceCode.device_code,
+      deviceCode.interval,
+      deviceCode.expires_in,
+      extra.signal
+    );
+
+    // Save token
+    saveToken(tokenResponse.access_token, "oauth_device_flow");
+
+    // Get username
+    const newOctokit = createOctokit(tokenResponse.access_token);
+    const { data: user } = await newOctokit.users.getAuthenticated();
+
+    // Activate in session
+    octokit = newOctokit;
+
+    // If we already had owner/repo configured, reload full config
+    const reloaded = tryLoadConfig();
+    if (reloaded) {
+      config = reloaded;
+    }
 
     return {
       content: [
         {
           type: "text" as const,
           text:
-            `✅ WebClaw configured successfully!\n\n` +
-            `  Vault: ${owner}/${repo} (${branch || "main"})\n` +
-            `  Config: ${getConfigPath()}\n\n` +
-            `You can now use all WebClaw tools to browse, read, write, and search your vault.`,
+            `Open this URL: ${deviceCode.verification_uri}\n` +
+            `Enter the code: **${deviceCode.user_code}**\n\n` +
+            `Connected as **${user.login}**.\n` +
+            `Use **webclaw_select_repo** to choose your vault repository.`,
         },
       ],
     };
+  }
+);
+
+// === Tool 0b: webclaw_select_repo ===
+
+server.tool(
+  "webclaw_select_repo",
+  "Select a GitHub repository as your vault. Without repo_name, lists your repos. With repo_name (owner/repo format), selects it.",
+  {
+    repo_name: z
+      .string()
+      .optional()
+      .describe("Repository in 'owner/repo' format. Omit to list available repos."),
+    branch: z
+      .string()
+      .optional()
+      .describe("Branch to use (default: repo's default branch)"),
+    filter: z
+      .string()
+      .optional()
+      .describe("Filter repos by name (substring match)"),
+  },
+  async ({ repo_name, branch, filter }) => {
+    // Need a token first
+    const token = loadTokenOnly();
+    if (!token) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: "Not authenticated yet. Use **webclaw_connect** first.",
+          },
+        ],
+      };
+    }
+
+    const kit = octokit || createOctokit(token);
+    if (!octokit) octokit = kit;
+
+    // List mode: no repo_name provided
+    if (!repo_name) {
+      let repos = await listUserRepos(kit, 30);
+
+      if (filter) {
+        const f = filter.toLowerCase();
+        repos = repos.filter((r) => r.full_name.toLowerCase().includes(f));
+      }
+
+      if (repos.length === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: filter
+                ? `No repos matching "${filter}". Try without filter or check your access.`
+                : "No repositories found. Check your GitHub permissions.",
+            },
+          ],
+        };
+      }
+
+      let text = `Your repositories (${repos.length}):\n\n`;
+      for (const r of repos) {
+        const vis = r.private ? "private" : "public";
+        const desc = r.description ? ` — ${r.description}` : "";
+        text += `  ${r.full_name} (${vis}, ${r.default_branch})${desc}\n`;
+      }
+      text += `\nUse webclaw_select_repo with repo_name="owner/repo" to select one.`;
+
+      return { content: [{ type: "text" as const, text }] };
+    }
+
+    // Select mode: repo_name provided
+    const parts = repo_name.split("/");
+    if (parts.length !== 2) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Invalid format. Use "owner/repo" (e.g. "johndoe/my-vault").`,
+          },
+        ],
+      };
+    }
+
+    const [owner, repo] = parts;
+
+    // Validate access
+    try {
+      const { data: repoData } = await kit.repos.get({ owner, repo });
+      const selectedBranch = branch || repoData.default_branch;
+
+      // Save full config
+      const newConfig: VaultConfig = {
+        token,
+        owner,
+        repo,
+        branch: selectedBranch,
+        auth_method: config?.auth_method || "oauth_device_flow",
+      };
+      saveConfig(newConfig);
+
+      // Activate in session
+      config = newConfig;
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text:
+              `Vault configured: **${owner}/${repo}** (${selectedBranch})\n` +
+              `Config saved to: ${getConfigPath()}\n\n` +
+              `All WebClaw tools are now active.`,
+          },
+        ],
+      };
+    } catch (err: unknown) {
+      const status =
+        err instanceof Error && "status" in err
+          ? (err as { status: number }).status
+          : 0;
+      if (status === 404) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Repository ${owner}/${repo} not found or no access. Check the name and your permissions.`,
+            },
+          ],
+        };
+      }
+      throw err;
+    }
   }
 );
 
@@ -782,9 +912,9 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("WebClaw MCP server running on stdio");
+  console.error("WebClaw MCP server v2.0.0 running on stdio");
   if (!config) {
-    console.error("⚠️  No config found — webclaw_setup tool is available for initial configuration");
+    console.error("⚠️  No config found — use webclaw_connect to authenticate");
   }
 }
 

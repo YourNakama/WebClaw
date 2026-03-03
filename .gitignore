@@ -25,6 +25,7 @@ npm-debug.log*
 
 # Build output
 # webclaw-plugin/server/dist/ is NOT ignored — pre-built for marketplace compatibility
+*.map
 
 # Logs
 *.log

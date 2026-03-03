@@ -40,4 +40,3 @@ export function toggleTaskInContent(content, lineNumber) {
     }
     return lines.join("\n");
 }
-//# sourceMappingURL=tasks.js.map
