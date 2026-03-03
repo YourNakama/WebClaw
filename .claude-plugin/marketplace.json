@@ -1,0 +1,20 @@
+{
+  "name": "webclaw-marketplace",
+  "owner": {
+    "name": "NakamaCyber"
+  },
+  "metadata": {
+    "description": "Official plugins from NakamaCyber, makers of WebClaw."
+  },
+  "plugins": [
+    {
+      "name": "webclaw",
+      "source": "./webclaw-plugin",
+      "description": "Connect Claude to your markdown vault on GitHub. Browse, read, write, search and manage tasks.",
+      "version": "1.0.0",
+      "homepage": "https://webclaw.nakamacyber.ai",
+      "keywords": ["vault", "markdown", "github", "notes", "tasks"],
+      "category": "productivity"
+    }
+  ]
+}

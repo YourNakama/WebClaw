@@ -1,6 +1,5 @@
 .DS_Store
 node_modules/
-dist/
 .env
 
 # OS
@@ -20,9 +19,12 @@ Thumbs.db
 *.pem
 *.key
 
-# Node (au cas ou)
+# Node
 node_modules/
 npm-debug.log*
+
+# Build output
+# webclaw-plugin/server/dist/ is NOT ignored — pre-built for marketplace compatibility
 
 # Logs
 *.log

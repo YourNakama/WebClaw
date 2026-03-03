@@ -1,0 +1,34 @@
+{
+  "name": "@nakamacyber/webclaw-mcp",
+  "version": "1.0.0",
+  "description": "MCP server connecting Claude to markdown vaults on GitHub via WebClaw conventions",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "webclaw-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@octokit/rest": "^22.0.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT",
+  "author": "NakamaCyber",
+  "homepage": "https://webclaw.nakamacyber.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YourNakama/WebClaw"
+  }
+}

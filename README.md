@@ -255,15 +255,47 @@ Step-by-step guides to get the most out of [webclaw.nakamacyber.ai](https://webc
 | [Real-world examples](./documentation/05-real-world-examples.md) | Detailed walkthroughs: RFPs, tech guides, reports, task tracking, templates, callouts |
 | [Create a skill](./documentation/06-creating-a-skill.md) | Full spec to contribute your own skills to the community |
 | [Mobile, PWA & offline](./documentation/07-mobile-and-offline.md) | Mobile layout, install as app, offline reading, Quick Switcher, demo mode |
+| [Claude plugin](./documentation/08-claude-plugin.md) | Install the Claude Code / Cowork plugin, connect your vault, tools & slash commands reference |
+
+---
+
+## Claude Plugin — manage your vault from Claude Code & Cowork
+
+<a href="https://webclaw.nakamacyber.ai"><img src="https://img.shields.io/badge/Try%20WebClaw-webclaw.nakamacyber.ai-7c3aed?style=for-the-badge" alt="Try WebClaw"></a>
+
+**Turn any GitHub repo into an organized markdown vault, directly from Claude.**
+
+The `webclaw` plugin connects Claude to your GitHub vault via MCP — browse, read, write, search, and manage tasks. Works with **Claude Code** (terminal) and **Claude Cowork** (desktop). Every change is committed to GitHub.
+
+### Install from Marketplace
+
+**Claude Code:**
+```bash
+/plugin marketplace add YourNakama/WebClaw
+/plugin install webclaw@webclaw-marketplace
+```
+
+**Claude Cowork:** Customize → + → Add marketplace from GitHub → `YourNakama/WebClaw`
+
+On first use, Claude asks for your GitHub token and repo in the conversation — no terminal setup needed.
+
+### What's included
+
+- **11 MCP tools** — list, read, create, update, delete files + search, tasks, tags, history, stats, setup
+- **8 slash commands** — `/webclaw:vault-browse`, `/webclaw:vault-tasks`, `/webclaw:vault-journal`, …
+- **2 agents** — vault-auditor (read-only scan) + vault-organizer (auto-fix)
+
+Full details in [`webclaw-plugin/README.md`](./webclaw-plugin/README.md).
 
 ---
 
 ## This repository
 
-This repo is the **public heart of WebClaw**. It serves two purposes:
+This repo is the **public heart of WebClaw**. It serves three purposes:
 
 1. **Documentation** — Everything you need to learn and master the app at [webclaw.nakamacyber.ai](https://webclaw.nakamacyber.ai)
 2. **Skill Hub** — The central registry of community skills that the app loads automatically
+3. **Claude Code Plugin** — An MCP plugin to manage your vault from Claude Code
 
 ```
 WebClaw/
@@ -272,17 +304,24 @@ WebClaw/
 │   ├── logo.png
 │   └── demo.gif               ← app demo (TODO)
 ├── registry.json              skill registry
+├── .claude-plugin/            marketplace catalogue
+│   └── marketplace.json
 ├── documentation/             user guides
 │   ├── 01-getting-started.md
-│   ├── 02-authentication.md
-│   ├── 03-connect-your-ai.md
-│   ├── 04-install-use-skills.md
-│   ├── 05-real-world-examples.md
-│   ├── 06-creating-a-skill.md
-│   └── 07-mobile-and-offline.md
+│   ├── ...
+│   ├── 07-mobile-and-offline.md
+│   └── 08-claude-plugin.md
 ├── doc-writer/                "Doc Writer" skill
 │   ├── skill.json
 │   └── prompt.md
+├── webclaw-plugin/            Claude Code plugin
+│   ├── .claude-plugin/
+│   ├── .mcp.json
+│   ├── server/                MCP server (TypeScript)
+│   ├── skills/                8 slash commands
+│   ├── agents/                vault-auditor, vault-organizer
+│   ├── scripts/setup.sh
+│   └── README.md
 └── ...                        future community skills
 ```
 
@@ -296,7 +335,6 @@ WebClaw/
 |-------|----------------|
 | **Meeting Notes** | Raw notes → structured report with decisions and action items |
 | **RFP Response Writer** | RFP digest + compliance matrix + response plan |
-| **Vault Cleanup Agent** | Auto-scan for empty files, missing frontmatter, broken links |
 | **Translation Agent** | Translate documents while preserving formatting |
 | **Zettelkasten Builder** | Atomic note-taking with `[[wiki-links]]` and index files |
 | **Weekly Review Agent** | Weekly summary of vault activity + pending tasks |
@@ -306,6 +344,8 @@ WebClaw/
 | **Changelog Writer** | Automated CHANGELOG.md maintenance |
 
 ### Recently shipped
+
+- **WebClaw Claude Plugin** — Manage your vault from Claude Code and Claude Cowork. 11 MCP tools, 8 slash commands, 2 agents (vault-auditor + vault-organizer). Install from the plugin directory or load locally. Pre-built, no setup required — Claude asks for your GitHub credentials in the conversation.
 
 - **Quick Switcher (Cmd+P)** — Fuzzy file search overlay, instant navigation across your vault. Shows recent files when empty, ranked fuzzy matches when typing
 - **Demo Mode** — Try WebClaw without a GitHub account. Click "Try Without Account" on the landing page to explore a sample vault with realistic files and tasks

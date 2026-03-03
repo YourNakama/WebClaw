@@ -143,4 +143,4 @@ Only if you're running a local model via Ollama. Cloud providers (Claude, OpenAI
 
 ---
 
-**Previous** → [Create a skill](./06-creating-a-skill.md) | **Start** → [Getting started](./01-getting-started.md)
+**Previous** → [Create a skill](./06-creating-a-skill.md) | **Next** → [Claude plugin](./08-claude-plugin.md)
