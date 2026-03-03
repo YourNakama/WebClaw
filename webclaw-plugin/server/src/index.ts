@@ -35,7 +35,7 @@ function requireConfig(): { octokit: Octokit; owner: string; repo: string; branc
 
 const server = new McpServer({
   name: "webclaw",
-  version: "1.1.0",
+  version: "1.2.0",
 });
 
 // === Prompts ===
@@ -912,7 +912,7 @@ server.tool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("WebClaw MCP server v1.1.0 running on stdio");
+  console.error("WebClaw MCP server v1.2.0 running on stdio");
   if (!config) {
     console.error("⚠️  No config found — use webclaw_connect to authenticate");
   }

@@ -1,6 +1,6 @@
 {
   "name": "webclaw",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Connect Claude to your markdown vault on GitHub. Browse, read, write, search and manage tasks. Powered by WebClaw.",
   "author": {
     "name": "NakamaCyber"

@@ -19,7 +19,7 @@ function requireConfig() {
 }
 const server = new McpServer({
     name: "webclaw",
-    version: "1.1.0",
+    version: "1.2.0",
 });
 // === Prompts ===
 server.prompt("webclaw_onboarding", "Guide the user through initial WebClaw setup when not configured", () => {
@@ -705,7 +705,7 @@ server.tool("webclaw_vault_stats", "Get an overview of the vault: file counts, t
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("WebClaw MCP server v1.1.0 running on stdio");
+    console.error("WebClaw MCP server v1.2.0 running on stdio");
     if (!config) {
         console.error("⚠️  No config found — use webclaw_connect to authenticate");
     }
