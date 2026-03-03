@@ -29,9 +29,13 @@ The plugin is pre-built and ready to use — no terminal, no build step.
 4. Enter `YourNakama/WebClaw`
 5. Install `webclaw` from the list
 
-### Remote server (Claude.ai / Cowork sans plugin local)
+Le plugin se connecte automatiquement au **serveur MCP distant** heberge sur Railway. La VM Cowork n'a pas besoin d'acces internet — c'est l'infrastructure Anthropic qui fait le pont vers le serveur externe.
 
-WebClaw est aussi disponible en tant que **serveur MCP distant**, deployé sur Railway. Le code deployé est exactement celui de ce repo public — vérifiable et auditable par tous.
+> **Transparence** : le serveur distant execute exactement le code de ce repo public. Pas de build prive, pas de code cache. Tout est verifiable et auditable par n'importe qui. Voir la section [Security](#security).
+
+### Connexion manuelle (sans marketplace)
+
+Si vous preferez ajouter le MCP manuellement sans passer par le marketplace :
 
 **Claude Code :**
 ```bash
@@ -43,8 +47,6 @@ claude mcp add --transport http webclaw https://webclaw-production-755c.up.railw
 https://webclaw-production-755c.up.railway.app/mcp
 ```
 
-Le flow d'authentification est le meme (OAuth Device Flow) — Claude vous guidera pour connecter votre GitHub.
-
 ### First use — connect your vault
 
 On first use, Claude will detect that no vault is configured and guide you through the setup:
@@ -52,7 +54,7 @@ On first use, Claude will detect that no vault is configured and guide you throu
 1. **`webclaw_connect`** — Opens your browser for GitHub authentication (OAuth Device Flow). No token to copy-paste.
 2. **`webclaw_select_repo`** — Lists your repositories so you can pick which one to use as your vault.
 
-Config is saved to `~/.webclaw/config.json` (chmod 600). No terminal needed. Works in both Claude Code and Cowork.
+En mode **local** (Claude Code stdio), la config est sauvegardee dans `~/.webclaw/config.json` (chmod 600). En mode **remote** (Cowork / Claude.ai), les tokens restent en memoire sur le serveur — rien n'est ecrit sur disque.
 
 <details>
 <summary>Fallback: environment variables (optional)</summary>
@@ -254,10 +256,11 @@ This plugin is distributed as a pre-built artifact — no `npm install` or build
 | Pre-built (no build on install) | Yes — `dist/` committed |
 | `plugin.json` manifest | `.claude-plugin/plugin.json` |
 | `marketplace.json` catalog | Root `.claude-plugin/marketplace.json` |
-| MCP server config | `.mcp.json` with `${CLAUDE_PLUGIN_ROOT}` |
+| MCP server config | `.mcp.json` — remote HTTP (serveur Railway) |
 | No reserved marketplace names | `webclaw-marketplace` |
 | Valid category | `productivity` |
 | Starts without config | Yes — `webclaw_connect` tool available |
+| Cowork compatible | Yes — serveur externe, pas besoin d'internet dans la VM |
 
 ---
 

@@ -25681,7 +25681,7 @@ if (state.config)
   state.octokit = createOctokit(state.config.token);
 var server = new McpServer({
   name: "webclaw",
-  version: "1.3.2"
+  version: "1.4.0"
 });
 server.prompt("webclaw_onboarding", "Guide the user through initial WebClaw setup when not configured", () => {
   if (state.config) {
@@ -25722,7 +25722,7 @@ registerTools(server, () => state, (patch) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("WebClaw MCP server v1.3.2 running on stdio");
+  console.error("WebClaw MCP server v1.4.0 running on stdio");
   if (!state.config) {
     console.error("\u26A0\uFE0F  No config found \u2014 use webclaw_connect to authenticate");
   }
