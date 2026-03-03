@@ -25041,7 +25041,7 @@ function requireConfig() {
 }
 var server = new McpServer({
   name: "webclaw",
-  version: "1.3.0"
+  version: "1.3.1"
 });
 server.prompt("webclaw_onboarding", "Guide the user through initial WebClaw setup when not configured", () => {
   if (config2) {
@@ -25108,19 +25108,21 @@ function formatTree(files, indent = "") {
   }
   return out;
 }
-server.tool("webclaw_connect", "Authenticate with GitHub using Device Flow. Opens your browser \u2014 no token needed. Run this before webclaw_select_repo.", {}, async (_params, extra) => {
+server.tool("webclaw_connect", "Authenticate with GitHub using Device Flow. Step 1: call without params to get a code. Step 2: tell the user to open the URL and enter the code. Step 3: call again with device_code to complete authentication.", {
+  device_code: external_exports.string().optional().describe("Device code from step 1. Omit to start a new auth flow.")
+}, async ({ device_code }, extra) => {
   const existingToken = loadTokenOnly();
-  if (existingToken) {
+  if (existingToken && !device_code) {
     try {
       const testOctokit = createOctokit(existingToken);
-      const { data: user2 } = await testOctokit.users.getAuthenticated();
+      const { data: user } = await testOctokit.users.getAuthenticated();
       if (!octokit)
         octokit = testOctokit;
       return {
         content: [
           {
             type: "text",
-            text: `Already connected as **${user2.login}**.
+            text: `Already connected as **${user.login}**.
 
 ` + (config2 ? `Current vault: ${config2.owner}/${config2.repo} (${config2.branch})
 All tools are ready.` : `Use **webclaw_select_repo** to choose your vault.`)
@@ -25130,26 +25132,36 @@ All tools are ready.` : `Use **webclaw_select_repo** to choose your vault.`)
     } catch {
     }
   }
-  const deviceCode = await requestDeviceCode();
-  openBrowser(deviceCode.verification_uri);
-  const tokenResponse = await pollForAccessToken(deviceCode.device_code, deviceCode.interval, deviceCode.expires_in, extra.signal);
-  saveToken(tokenResponse.access_token, "oauth_device_flow");
-  const newOctokit = createOctokit(tokenResponse.access_token);
-  const { data: user } = await newOctokit.users.getAuthenticated();
-  octokit = newOctokit;
-  const reloaded = tryLoadConfig();
-  if (reloaded) {
-    config2 = reloaded;
+  if (device_code) {
+    const tokenResponse = await pollForAccessToken(device_code, 5, 900, extra.signal);
+    saveToken(tokenResponse.access_token, "oauth_device_flow");
+    const newOctokit = createOctokit(tokenResponse.access_token);
+    const { data: user } = await newOctokit.users.getAuthenticated();
+    octokit = newOctokit;
+    const reloaded = tryLoadConfig();
+    if (reloaded) {
+      config2 = reloaded;
+    }
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Connected as **${user.login}**.
+Use **webclaw_select_repo** to choose your vault repository.`
+        }
+      ]
+    };
   }
+  const deviceCodeResponse = await requestDeviceCode();
+  openBrowser(deviceCodeResponse.verification_uri);
   return {
     content: [
       {
         type: "text",
-        text: `Open this URL: ${deviceCode.verification_uri}
-Enter the code: **${deviceCode.user_code}**
+        text: `Go to: **${deviceCodeResponse.verification_uri}**
+Enter the code: **${deviceCodeResponse.user_code}**
 
-Connected as **${user.login}**.
-Use **webclaw_select_repo** to choose your vault repository.`
+Once authorized, call webclaw_connect again with device_code="${deviceCodeResponse.device_code}" to complete.`
       }
     ]
   };
@@ -25663,7 +25675,7 @@ ${extList}
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("WebClaw MCP server v1.3.0 running on stdio");
+  console.error("WebClaw MCP server v1.3.1 running on stdio");
   if (!config2) {
     console.error("\u26A0\uFE0F  No config found \u2014 use webclaw_connect to authenticate");
   }
