@@ -86,10 +86,11 @@ The plugin exposes 12 tools to Claude via the Model Context Protocol:
 
 ---
 
-## Skills (8 slash commands)
+## Skills (9 slash commands)
 
 | Command | What it does |
 |---------|-------------|
+| `/webclaw:vault-connect` | Authenticate with GitHub and select your vault repo |
 | `/webclaw:vault-browse` | Browse your vault structure with stats |
 | `/webclaw:vault-read` | Read a file with frontmatter display |
 | `/webclaw:vault-write` | Create or update files with proper frontmatter |

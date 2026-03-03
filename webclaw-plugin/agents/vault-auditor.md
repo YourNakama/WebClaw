@@ -2,6 +2,8 @@
 name: vault-auditor
 description: Scans the vault for structural issues — missing frontmatter, empty files, naming problems, misplaced files. Read-only.
 tools:
+  - webclaw_connect
+  - webclaw_select_repo
   - webclaw_list_files
   - webclaw_read_file
   - webclaw_get_tags

@@ -2,6 +2,8 @@
 name: vault-organizer
 description: Fixes vault issues identified by the auditor — adds frontmatter, renames files, moves misplaced content. Read/write.
 tools:
+  - webclaw_connect
+  - webclaw_select_repo
   - webclaw_list_files
   - webclaw_read_file
   - webclaw_update_file
