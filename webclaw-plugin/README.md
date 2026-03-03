@@ -53,10 +53,20 @@ Pour autoriser le domaine dans Claude Code, ajoutez-le dans votre config (`~/.cl
 }
 ```
 
-**Claude.ai / Cowork :** ajouter via l'interface des connecteurs MCP distants avec l'URL :
-```
-https://mcp.webclaw.nakamacyber.ai/mcp
-```
+**Claude Cowork :**
+
+1. Ouvrir **Cowork** dans Claude Desktop
+2. Cliquer **Personnaliser** (icone engrenage en bas a gauche)
+3. Dans la section **Connecteurs**, cliquer **Modifier**
+4. Cliquer **+ Ajouter** et entrer l'URL :
+   ```
+   https://mcp.webclaw.nakamacyber.ai/mcp
+   ```
+5. Cliquer **Connecter** — une fenetre s'ouvre pour autoriser l'acces a votre compte GitHub
+6. Autoriser l'application **WebClaw MCP** sur GitHub
+7. Retour automatique dans Cowork — le connecteur affiche un indicateur vert
+
+**Claude.ai (web) :** meme principe, ajouter l'URL via l'interface des connecteurs MCP distants.
 
 ### First use — connect your vault
 
@@ -322,7 +332,7 @@ Image finale : ~60 MB (Node Alpine + un seul fichier JS). Pas de `node_modules` 
 
 | Endpoint | Methode | Description |
 |----------|---------|-------------|
-| `/health` | GET | Health check — retourne `{"status":"ok","version":"1.6.0","sessions":N}` |
+| `/health` | GET | Health check — retourne `{"status":"ok","server":"webclaw-mcp","version":"1.6.1"}` |
 | `/.well-known/oauth-authorization-server` | GET | Metadata OAuth (decouverte des endpoints) |
 | `/.well-known/oauth-protected-resource` | GET | Metadata de la ressource protegee |
 | `/register` | POST | Dynamic Client Registration (DCR) |
