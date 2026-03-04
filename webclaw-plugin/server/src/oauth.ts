@@ -222,11 +222,15 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
   ): Promise<string> {
     const issued = this.issuedCodes.get(authorizationCode);
     if (!issued) {
-      throw new Error("Unknown authorization code");
+      throw new Error("Invalid authorization code");
     }
-    // Verify the code was issued to THIS client
     if (issued.clientId !== client.client_id) {
-      throw new Error("Authorization code was not issued to this client");
+      throw new Error("Invalid authorization code");
+    }
+    // Reject expired codes (5-minute TTL)
+    if (Date.now() - issued.createdAt > 5 * 60 * 1000) {
+      this.issuedCodes.delete(authorizationCode);
+      throw new Error("Invalid authorization code");
     }
     return issued.codeChallenge;
   }
@@ -239,11 +243,15 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
   ): Promise<OAuthTokens> {
     const issued = this.issuedCodes.get(authorizationCode);
     if (!issued) {
-      throw new Error("Unknown or expired authorization code");
+      throw new Error("Invalid authorization code");
     }
-    // Verify the code was issued to THIS client
     if (issued.clientId !== client.client_id) {
-      throw new Error("Authorization code was not issued to this client");
+      throw new Error("Invalid authorization code");
+    }
+    // Reject expired codes (5-minute TTL)
+    if (Date.now() - issued.createdAt > 5 * 60 * 1000) {
+      this.issuedCodes.delete(authorizationCode);
+      throw new Error("Invalid authorization code");
     }
     this.issuedCodes.delete(authorizationCode);
 

@@ -24861,7 +24861,7 @@ async function getFileHistory(octokit, owner, repo, path, perPage = 30) {
 }
 
 // dist/auth.js
-import { exec } from "child_process";
+import { spawn } from "child_process";
 var GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23ctlK0eSRxyelzeNs";
 async function requestDeviceCode() {
   const res = await fetch("https://github.com/login/device/code", {
@@ -24930,15 +24930,19 @@ async function pollForAccessToken(deviceCode, interval, expiresIn, signal) {
 function openBrowser(url) {
   const platform = process.platform;
   let cmd;
+  let args;
   if (platform === "darwin") {
-    cmd = `open "${url}"`;
+    cmd = "open";
+    args = [url];
   } else if (platform === "win32") {
-    cmd = `start "" "${url}"`;
+    cmd = "cmd";
+    args = ["/c", "start", "", url];
   } else {
-    cmd = `xdg-open "${url}"`;
+    cmd = "xdg-open";
+    args = [url];
   }
-  exec(cmd, () => {
-  });
+  const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+  child.unref();
 }
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
@@ -25031,6 +25035,7 @@ function extractTasks(content, filePath, tags) {
 }
 
 // dist/tools.js
+var MAX_FILES_TO_SCAN = 200;
 function buildTree(items, directory) {
   const filtered = directory ? items.filter((i) => i.path.startsWith(directory + "/") || i.path === directory) : items;
   const roots = [];
@@ -25115,6 +25120,22 @@ All tools are ready.` : `Use **webclaw_select_repo** to choose your vault.`)
         };
       } catch {
       }
+    }
+    if (options.isRemote && device_code) {
+      return {
+        content: [{
+          type: "text",
+          text: "Device Flow is not available in remote mode. Authentication is handled automatically via MCP OAuth."
+        }]
+      };
+    }
+    if (options.isRemote && !state2.octokit) {
+      return {
+        content: [{
+          type: "text",
+          text: "Authentication is handled automatically via MCP OAuth. Please reconnect your MCP client."
+        }]
+      };
     }
     if (device_code) {
       const tokenResponse = await pollForAccessToken(device_code, 5, 900, extra.signal);
@@ -25232,8 +25253,7 @@ Use webclaw_select_repo with repo_name="owner/repo" to select one.`;
       const selectedBranch = branch || repoData.default_branch;
       let tokenForConfig;
       if (options.isRemote) {
-        const auth2 = await kit.auth();
-        tokenForConfig = auth2.token || "";
+        tokenForConfig = "";
       } else {
         tokenForConfig = options.loadTokenOnly?.() || "";
       }
@@ -25438,6 +25458,7 @@ Commit: ${commitMsg}`
     if (extension) {
       files = files.filter((i) => i.path.endsWith(extension));
     }
+    files = files.slice(0, MAX_FILES_TO_SCAN);
     const limit = Math.min(max_results || 20, 50);
     const results = [];
     const queryLower = query.toLowerCase();
@@ -25500,6 +25521,7 @@ ${r.matches.join("\n")}
     if (directory) {
       files = files.filter((i) => i.path.startsWith(directory + "/"));
     }
+    files = files.slice(0, MAX_FILES_TO_SCAN);
     const allTasks = [];
     const batchSize = 5;
     for (let i = 0; i < files.length; i += batchSize) {
@@ -25552,6 +25574,7 @@ ${r.matches.join("\n")}
     if (directory) {
       files = files.filter((i) => i.path.startsWith(directory + "/"));
     }
+    files = files.slice(0, MAX_FILES_TO_SCAN);
     const tagCounts = /* @__PURE__ */ new Map();
     const tagFiles = /* @__PURE__ */ new Map();
     const batchSize = 5;
@@ -25629,7 +25652,7 @@ ${r.matches.join("\n")}
       const ext = f.path.includes(".") ? "." + f.path.split(".").pop() : "(no ext)";
       extCounts.set(ext, (extCounts.get(ext) || 0) + 1);
     }
-    const mdFiles = files.filter((f) => f.path.endsWith(".md"));
+    const mdFiles = files.filter((f) => f.path.endsWith(".md")).slice(0, MAX_FILES_TO_SCAN);
     let totalTasks = 0;
     let completedTasks = 0;
     const allTags = /* @__PURE__ */ new Set();

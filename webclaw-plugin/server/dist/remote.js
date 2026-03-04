@@ -7,7 +7,29 @@ import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middlew
 import { GitHubOAuthProvider } from "./oauth.js";
 import { registerTools } from "./tools.js";
 import { createOctokit } from "./config.js";
+// --- Session limits (DoS protection) ---
+const MAX_SESSIONS = 1000;
+const SESSION_IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const sessions = new Map();
+// Secondary index: ownerHash → sessionId
+// Allows session lookup when Mcp-Session-Id header is missing (e.g. Cowork)
+const ownerIndex = new Map();
+// Periodic session cleanup (every 5 min)
+const sessionCleanup = setInterval(() => {
+    const now = Date.now();
+    for (const [id, entry] of sessions) {
+        if (now - entry.lastActivity > SESSION_IDLE_TIMEOUT) {
+            entry.state.octokit = null;
+            entry.state.config = null;
+            sessions.delete(id);
+            // Clean ownerIndex if it points to this session
+            if (ownerIndex.get(entry.ownerHash) === id) {
+                ownerIndex.delete(entry.ownerHash);
+            }
+        }
+    }
+}, 5 * 60_000);
+sessionCleanup.unref();
 // --- OAuth provider ---
 const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || "3000"}`;
 const provider = new GitHubOAuthProvider();
@@ -17,9 +39,21 @@ function hashToken(token) {
 }
 // --- Create a new MCP session ---
 function createSession(githubToken) {
+    const oh = hashToken(githubToken);
+    // Replace any existing session for the same owner (1 active session per user)
+    const oldSessionId = ownerIndex.get(oh);
+    if (oldSessionId) {
+        const old = sessions.get(oldSessionId);
+        if (old) {
+            old.state.octokit = null;
+            old.state.config = null;
+        }
+        sessions.delete(oldSessionId);
+        ownerIndex.delete(oh);
+    }
     const mcpServer = new McpServer({
         name: "webclaw",
-        version: "1.6.1",
+        version: "1.6.2",
     });
     const octokit = createOctokit(githubToken);
     const sessionState = { config: null, octokit };
@@ -28,9 +62,18 @@ function createSession(githubToken) {
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (sessionId) => {
             sessions.set(sessionId, entry);
-            console.log("[session] created");
+            ownerIndex.set(oh, sessionId);
+            console.log(`[session] created (owner=${oh.slice(0, 8)}…)`);
         },
         onsessionclosed: (sessionId) => {
+            const closing = sessions.get(sessionId);
+            if (closing) {
+                closing.state.octokit = null;
+                closing.state.config = null;
+                if (ownerIndex.get(closing.ownerHash) === sessionId) {
+                    ownerIndex.delete(closing.ownerHash);
+                }
+            }
             sessions.delete(sessionId);
             console.log("[session] closed");
         },
@@ -39,7 +82,8 @@ function createSession(githubToken) {
         transport,
         server: mcpServer,
         state: sessionState,
-        ownerHash: hashToken(githubToken),
+        ownerHash: oh,
+        lastActivity: Date.now(),
     };
     return entry;
 }
@@ -53,6 +97,9 @@ app.use(express.json({ limit: "100kb" }));
 app.use((_req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "no-referrer");
     next();
 });
 // CORS middleware
@@ -98,20 +145,34 @@ app.all("/mcp", bearerAuth, async (req, res) => {
     const githubToken = req.auth.token;
     const tokenHash = hashToken(githubToken);
     const sessionId = req.headers["mcp-session-id"];
-    // Existing session: verify ownership, then refresh octokit
+    // Path 1: explicit session ID → verify ownership, refresh octokit
     if (sessionId && sessions.has(sessionId)) {
         const entry = sessions.get(sessionId);
-        // Session must belong to the same user (token hash match)
         if (entry.ownerHash !== tokenHash) {
             res.status(403).json({ error: "Session belongs to a different user" });
             return;
         }
         entry.state.octokit = createOctokit(githubToken);
+        entry.lastActivity = Date.now();
         await entry.transport.handleRequest(req, res, req.body);
         return;
     }
-    // New session (POST without session ID or unknown session ID)
+    // Path 2: no session ID (or stale) — fallback via ownerIndex
+    // Cowork doesn't propagate Mcp-Session-Id, so we look up by token owner
     if (req.method === "POST") {
+        const existingSessionId = ownerIndex.get(tokenHash);
+        if (existingSessionId && sessions.has(existingSessionId)) {
+            const entry = sessions.get(existingSessionId);
+            entry.state.octokit = createOctokit(githubToken);
+            entry.lastActivity = Date.now();
+            await entry.transport.handleRequest(req, res, req.body);
+            return;
+        }
+        // Path 3: truly new session
+        if (sessions.size >= MAX_SESSIONS) {
+            res.status(503).json({ error: "Server busy, try again later" });
+            return;
+        }
         const entry = createSession(githubToken);
         await entry.server.connect(entry.transport);
         await entry.transport.handleRequest(req, res, req.body);
@@ -125,7 +186,7 @@ app.get(["/health", "/"], (_req, res) => {
     res.json({
         status: "ok",
         server: "webclaw-mcp",
-        version: "1.6.1",
+        version: "1.6.2",
     });
 });
 // Global error handler — never leak stack traces
@@ -136,5 +197,5 @@ app.use((err, _req, res, _next) => {
 // --- Start ---
 const PORT = parseInt(process.env.PORT || "3000", 10);
 app.listen(PORT, () => {
-    console.log(`WebClaw MCP remote server v1.6.1 listening on port ${PORT}`);
+    console.log(`WebClaw MCP remote server v1.6.2 listening on port ${PORT}`);
 });

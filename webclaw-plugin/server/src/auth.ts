@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { spawn } from "child_process";
 import type { DeviceCodeResponse, OAuthTokenResponse } from "./types.js";
 
 // Public OAuth Client ID — safe to embed in source code.
@@ -93,18 +93,21 @@ export async function pollForAccessToken(
 export function openBrowser(url: string): void {
   const platform = process.platform;
   let cmd: string;
+  let args: string[];
 
   if (platform === "darwin") {
-    cmd = `open "${url}"`;
+    cmd = "open";
+    args = [url];
   } else if (platform === "win32") {
-    cmd = `start "" "${url}"`;
+    cmd = "cmd";
+    args = ["/c", "start", "", url];
   } else {
-    cmd = `xdg-open "${url}"`;
+    cmd = "xdg-open";
+    args = [url];
   }
 
-  exec(cmd, () => {
-    // Fire-and-forget — ignore errors (user can open manually)
-  });
+  const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+  child.unref();
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {

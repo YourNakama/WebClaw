@@ -16,6 +16,10 @@ import { extractTasks } from "./tasks.js";
 import type { VaultConfig, VaultFile, GitHubTreeItem, SessionState } from "./types.js";
 import { Octokit } from "@octokit/rest";
 
+// === Constants ===
+
+const MAX_FILES_TO_SCAN = 200;
+
 // === Helpers ===
 
 function buildTree(items: GitHubTreeItem[], directory?: string): VaultFile[] {
@@ -150,6 +154,24 @@ export function registerTools(
         } catch {
           // Token invalid — proceed with Device Flow
         }
+      }
+
+      // Block Device Flow in remote mode — auth is handled by MCP OAuth
+      if (options.isRemote && device_code) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: "Device Flow is not available in remote mode. Authentication is handled automatically via MCP OAuth.",
+          }],
+        };
+      }
+      if (options.isRemote && !state.octokit) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: "Authentication is handled automatically via MCP OAuth. Please reconnect your MCP client.",
+          }],
+        };
       }
 
       // Step 2: Poll for token (user already has the code)
@@ -315,12 +337,10 @@ export function registerTools(
         const { data: repoData } = await kit.repos.get({ owner, repo });
         const selectedBranch = branch || repoData.default_branch;
 
-        // Get token from octokit auth (for remote mode, we need to extract it)
+        // Get token for config — in remote mode, don't persist the raw token
         let tokenForConfig: string;
         if (options.isRemote) {
-          // In remote mode, get token from the authenticated octokit
-          const auth = await kit.auth() as { token?: string };
-          tokenForConfig = auth.token || "";
+          tokenForConfig = "";
         } else {
           tokenForConfig = options.loadTokenOnly?.() || "";
         }
@@ -641,6 +661,9 @@ export function registerTools(
         files = files.filter((i) => i.path.endsWith(extension));
       }
 
+      // Cap total files to scan to prevent DoS on large repos
+      files = files.slice(0, MAX_FILES_TO_SCAN);
+
       const limit = Math.min(max_results || 20, 50);
       const results: Array<{ path: string; matches: string[] }> = [];
       const queryLower = query.toLowerCase();
@@ -717,6 +740,7 @@ export function registerTools(
       if (directory) {
         files = files.filter((i) => i.path.startsWith(directory + "/"));
       }
+      files = files.slice(0, MAX_FILES_TO_SCAN);
 
       const allTasks: Array<{
         filePath: string;
@@ -787,6 +811,7 @@ export function registerTools(
       if (directory) {
         files = files.filter((i) => i.path.startsWith(directory + "/"));
       }
+      files = files.slice(0, MAX_FILES_TO_SCAN);
 
       const tagCounts = new Map<string, number>();
       const tagFiles = new Map<string, string[]>();
@@ -894,7 +919,7 @@ export function registerTools(
         extCounts.set(ext, (extCounts.get(ext) || 0) + 1);
       }
 
-      const mdFiles = files.filter((f) => f.path.endsWith(".md"));
+      const mdFiles = files.filter((f) => f.path.endsWith(".md")).slice(0, MAX_FILES_TO_SCAN);
       let totalTasks = 0;
       let completedTasks = 0;
       const allTags = new Set<string>();

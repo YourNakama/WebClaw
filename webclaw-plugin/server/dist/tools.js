@@ -4,6 +4,8 @@ import { getRepoTree, getFileContent, createOrUpdateFile, deleteFile, getFileSha
 import { requestDeviceCode, pollForAccessToken, openBrowser } from "./auth.js";
 import { parseFrontmatter, extractTags } from "./frontmatter.js";
 import { extractTasks } from "./tasks.js";
+// === Constants ===
+const MAX_FILES_TO_SCAN = 200;
 // === Helpers ===
 function buildTree(items, directory) {
     const filtered = directory
@@ -109,6 +111,23 @@ export function registerTools(server, getState, setState, options) {
             catch {
                 // Token invalid — proceed with Device Flow
             }
+        }
+        // Block Device Flow in remote mode — auth is handled by MCP OAuth
+        if (options.isRemote && device_code) {
+            return {
+                content: [{
+                        type: "text",
+                        text: "Device Flow is not available in remote mode. Authentication is handled automatically via MCP OAuth.",
+                    }],
+            };
+        }
+        if (options.isRemote && !state.octokit) {
+            return {
+                content: [{
+                        type: "text",
+                        text: "Authentication is handled automatically via MCP OAuth. Please reconnect your MCP client.",
+                    }],
+            };
         }
         // Step 2: Poll for token (user already has the code)
         if (device_code) {
@@ -240,12 +259,10 @@ export function registerTools(server, getState, setState, options) {
         try {
             const { data: repoData } = await kit.repos.get({ owner, repo });
             const selectedBranch = branch || repoData.default_branch;
-            // Get token from octokit auth (for remote mode, we need to extract it)
+            // Get token for config — in remote mode, don't persist the raw token
             let tokenForConfig;
             if (options.isRemote) {
-                // In remote mode, get token from the authenticated octokit
-                const auth = await kit.auth();
-                tokenForConfig = auth.token || "";
+                tokenForConfig = "";
             }
             else {
                 tokenForConfig = options.loadTokenOnly?.() || "";
@@ -490,6 +507,8 @@ export function registerTools(server, getState, setState, options) {
         if (extension) {
             files = files.filter((i) => i.path.endsWith(extension));
         }
+        // Cap total files to scan to prevent DoS on large repos
+        files = files.slice(0, MAX_FILES_TO_SCAN);
         const limit = Math.min(max_results || 20, 50);
         const results = [];
         const queryLower = query.toLowerCase();
@@ -553,6 +572,7 @@ export function registerTools(server, getState, setState, options) {
         if (directory) {
             files = files.filter((i) => i.path.startsWith(directory + "/"));
         }
+        files = files.slice(0, MAX_FILES_TO_SCAN);
         const allTasks = [];
         const batchSize = 5;
         for (let i = 0; i < files.length; i += batchSize) {
@@ -603,6 +623,7 @@ export function registerTools(server, getState, setState, options) {
         if (directory) {
             files = files.filter((i) => i.path.startsWith(directory + "/"));
         }
+        files = files.slice(0, MAX_FILES_TO_SCAN);
         const tagCounts = new Map();
         const tagFiles = new Map();
         const batchSize = 5;
@@ -683,7 +704,7 @@ export function registerTools(server, getState, setState, options) {
                 : "(no ext)";
             extCounts.set(ext, (extCounts.get(ext) || 0) + 1);
         }
-        const mdFiles = files.filter((f) => f.path.endsWith(".md"));
+        const mdFiles = files.filter((f) => f.path.endsWith(".md")).slice(0, MAX_FILES_TO_SCAN);
         let totalTasks = 0;
         let completedTasks = 0;
         const allTags = new Set();

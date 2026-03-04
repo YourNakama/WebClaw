@@ -49531,10 +49531,14 @@ var GitHubOAuthProvider = class {
   async challengeForAuthorizationCode(client, authorizationCode) {
     const issued = this.issuedCodes.get(authorizationCode);
     if (!issued) {
-      throw new Error("Unknown authorization code");
+      throw new Error("Invalid authorization code");
     }
     if (issued.clientId !== client.client_id) {
-      throw new Error("Authorization code was not issued to this client");
+      throw new Error("Invalid authorization code");
+    }
+    if (Date.now() - issued.createdAt > 5 * 60 * 1e3) {
+      this.issuedCodes.delete(authorizationCode);
+      throw new Error("Invalid authorization code");
     }
     return issued.codeChallenge;
   }
@@ -49542,10 +49546,14 @@ var GitHubOAuthProvider = class {
   async exchangeAuthorizationCode(client, authorizationCode) {
     const issued = this.issuedCodes.get(authorizationCode);
     if (!issued) {
-      throw new Error("Unknown or expired authorization code");
+      throw new Error("Invalid authorization code");
     }
     if (issued.clientId !== client.client_id) {
-      throw new Error("Authorization code was not issued to this client");
+      throw new Error("Invalid authorization code");
+    }
+    if (Date.now() - issued.createdAt > 5 * 60 * 1e3) {
+      this.issuedCodes.delete(authorizationCode);
+      throw new Error("Invalid authorization code");
     }
     this.issuedCodes.delete(authorizationCode);
     return {
@@ -53320,7 +53328,7 @@ async function getFileHistory(octokit, owner, repo, path, perPage = 30) {
 }
 
 // dist/auth.js
-import { exec } from "child_process";
+import { spawn } from "child_process";
 var GITHUB_CLIENT_ID2 = process.env.GITHUB_CLIENT_ID || "Ov23ctlK0eSRxyelzeNs";
 async function requestDeviceCode() {
   const res = await fetch("https://github.com/login/device/code", {
@@ -53389,15 +53397,19 @@ async function pollForAccessToken(deviceCode, interval, expiresIn, signal) {
 function openBrowser(url2) {
   const platform = process.platform;
   let cmd;
+  let args;
   if (platform === "darwin") {
-    cmd = `open "${url2}"`;
+    cmd = "open";
+    args = [url2];
   } else if (platform === "win32") {
-    cmd = `start "" "${url2}"`;
+    cmd = "cmd";
+    args = ["/c", "start", "", url2];
   } else {
-    cmd = `xdg-open "${url2}"`;
+    cmd = "xdg-open";
+    args = [url2];
   }
-  exec(cmd, () => {
-  });
+  const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+  child.unref();
 }
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
@@ -53490,6 +53502,7 @@ function extractTasks(content, filePath, tags) {
 }
 
 // dist/tools.js
+var MAX_FILES_TO_SCAN = 200;
 function buildTree(items, directory) {
   const filtered = directory ? items.filter((i) => i.path.startsWith(directory + "/") || i.path === directory) : items;
   const roots = [];
@@ -53574,6 +53587,22 @@ All tools are ready.` : `Use **webclaw_select_repo** to choose your vault.`)
         };
       } catch {
       }
+    }
+    if (options.isRemote && device_code) {
+      return {
+        content: [{
+          type: "text",
+          text: "Device Flow is not available in remote mode. Authentication is handled automatically via MCP OAuth."
+        }]
+      };
+    }
+    if (options.isRemote && !state.octokit) {
+      return {
+        content: [{
+          type: "text",
+          text: "Authentication is handled automatically via MCP OAuth. Please reconnect your MCP client."
+        }]
+      };
     }
     if (device_code) {
       const tokenResponse = await pollForAccessToken(device_code, 5, 900, extra.signal);
@@ -53691,8 +53720,7 @@ Use webclaw_select_repo with repo_name="owner/repo" to select one.`;
       const selectedBranch = branch || repoData.default_branch;
       let tokenForConfig;
       if (options.isRemote) {
-        const auth2 = await kit.auth();
-        tokenForConfig = auth2.token || "";
+        tokenForConfig = "";
       } else {
         tokenForConfig = options.loadTokenOnly?.() || "";
       }
@@ -53897,6 +53925,7 @@ Commit: ${commitMsg}`
     if (extension) {
       files = files.filter((i) => i.path.endsWith(extension));
     }
+    files = files.slice(0, MAX_FILES_TO_SCAN);
     const limit = Math.min(max_results || 20, 50);
     const results = [];
     const queryLower = query.toLowerCase();
@@ -53959,6 +53988,7 @@ ${r.matches.join("\n")}
     if (directory) {
       files = files.filter((i) => i.path.startsWith(directory + "/"));
     }
+    files = files.slice(0, MAX_FILES_TO_SCAN);
     const allTasks = [];
     const batchSize = 5;
     for (let i = 0; i < files.length; i += batchSize) {
@@ -54011,6 +54041,7 @@ ${r.matches.join("\n")}
     if (directory) {
       files = files.filter((i) => i.path.startsWith(directory + "/"));
     }
+    files = files.slice(0, MAX_FILES_TO_SCAN);
     const tagCounts = /* @__PURE__ */ new Map();
     const tagFiles = /* @__PURE__ */ new Map();
     const batchSize = 5;
@@ -54088,7 +54119,7 @@ ${r.matches.join("\n")}
       const ext = f.path.includes(".") ? "." + f.path.split(".").pop() : "(no ext)";
       extCounts.set(ext, (extCounts.get(ext) || 0) + 1);
     }
-    const mdFiles = files.filter((f) => f.path.endsWith(".md"));
+    const mdFiles = files.filter((f) => f.path.endsWith(".md")).slice(0, MAX_FILES_TO_SCAN);
     let totalTasks = 0;
     let completedTasks = 0;
     const allTags = /* @__PURE__ */ new Set();
@@ -54145,16 +54176,44 @@ ${extList}
 }
 
 // dist/remote.js
+var MAX_SESSIONS = 1e3;
+var SESSION_IDLE_TIMEOUT = 30 * 60 * 1e3;
 var sessions = /* @__PURE__ */ new Map();
+var ownerIndex = /* @__PURE__ */ new Map();
+var sessionCleanup = setInterval(() => {
+  const now = Date.now();
+  for (const [id, entry] of sessions) {
+    if (now - entry.lastActivity > SESSION_IDLE_TIMEOUT) {
+      entry.state.octokit = null;
+      entry.state.config = null;
+      sessions.delete(id);
+      if (ownerIndex.get(entry.ownerHash) === id) {
+        ownerIndex.delete(entry.ownerHash);
+      }
+    }
+  }
+}, 5 * 6e4);
+sessionCleanup.unref();
 var SERVER_URL2 = process.env.SERVER_URL || `http://localhost:${process.env.PORT || "3000"}`;
 var provider = new GitHubOAuthProvider();
 function hashToken2(token) {
   return createHash3("sha256").update(token).digest("hex");
 }
 function createSession(githubToken) {
+  const oh = hashToken2(githubToken);
+  const oldSessionId = ownerIndex.get(oh);
+  if (oldSessionId) {
+    const old = sessions.get(oldSessionId);
+    if (old) {
+      old.state.octokit = null;
+      old.state.config = null;
+    }
+    sessions.delete(oldSessionId);
+    ownerIndex.delete(oh);
+  }
   const mcpServer = new McpServer({
     name: "webclaw",
-    version: "1.6.1"
+    version: "1.6.2"
   });
   const octokit = createOctokit(githubToken);
   const sessionState = { config: null, octokit };
@@ -54165,9 +54224,18 @@ function createSession(githubToken) {
     sessionIdGenerator: () => randomUUID2(),
     onsessioninitialized: (sessionId) => {
       sessions.set(sessionId, entry);
-      console.log("[session] created");
+      ownerIndex.set(oh, sessionId);
+      console.log(`[session] created (owner=${oh.slice(0, 8)}\u2026)`);
     },
     onsessionclosed: (sessionId) => {
+      const closing = sessions.get(sessionId);
+      if (closing) {
+        closing.state.octokit = null;
+        closing.state.config = null;
+        if (ownerIndex.get(closing.ownerHash) === sessionId) {
+          ownerIndex.delete(closing.ownerHash);
+        }
+      }
       sessions.delete(sessionId);
       console.log("[session] closed");
     }
@@ -54176,7 +54244,8 @@ function createSession(githubToken) {
     transport,
     server: mcpServer,
     state: sessionState,
-    ownerHash: hashToken2(githubToken)
+    ownerHash: oh,
+    lastActivity: Date.now()
   };
   return entry;
 }
@@ -54186,6 +54255,9 @@ app.use(import_express7.default.json({ limit: "100kb" }));
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
   next();
 });
 app.use((req, res, next) => {
@@ -54231,10 +54303,23 @@ app.all("/mcp", bearerAuth, async (req, res) => {
       return;
     }
     entry.state.octokit = createOctokit(githubToken);
+    entry.lastActivity = Date.now();
     await entry.transport.handleRequest(req, res, req.body);
     return;
   }
   if (req.method === "POST") {
+    const existingSessionId = ownerIndex.get(tokenHash);
+    if (existingSessionId && sessions.has(existingSessionId)) {
+      const entry2 = sessions.get(existingSessionId);
+      entry2.state.octokit = createOctokit(githubToken);
+      entry2.lastActivity = Date.now();
+      await entry2.transport.handleRequest(req, res, req.body);
+      return;
+    }
+    if (sessions.size >= MAX_SESSIONS) {
+      res.status(503).json({ error: "Server busy, try again later" });
+      return;
+    }
     const entry = createSession(githubToken);
     await entry.server.connect(entry.transport);
     await entry.transport.handleRequest(req, res, req.body);
@@ -54246,7 +54331,7 @@ app.get(["/health", "/"], (_req, res) => {
   res.json({
     status: "ok",
     server: "webclaw-mcp",
-    version: "1.6.1"
+    version: "1.6.2"
   });
 });
 app.use((err, _req, res, _next) => {
@@ -54255,7 +54340,7 @@ app.use((err, _req, res, _next) => {
 });
 var PORT = parseInt(process.env.PORT || "3000", 10);
 app.listen(PORT, () => {
-  console.log(`WebClaw MCP remote server v1.6.1 listening on port ${PORT}`);
+  console.log(`WebClaw MCP remote server v1.6.2 listening on port ${PORT}`);
 });
 /*! Bundled license information:
 

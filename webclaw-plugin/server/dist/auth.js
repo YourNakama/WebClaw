@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { spawn } from "child_process";
 // Public OAuth Client ID — safe to embed in source code.
 // This is NOT a secret. The Device Flow doesn't use a client_secret.
 // Same pattern as GitHub's own CLI (`gh`): the client_id is a public
@@ -73,18 +73,21 @@ export async function pollForAccessToken(deviceCode, interval, expiresIn, signal
 export function openBrowser(url) {
     const platform = process.platform;
     let cmd;
+    let args;
     if (platform === "darwin") {
-        cmd = `open "${url}"`;
+        cmd = "open";
+        args = [url];
     }
     else if (platform === "win32") {
-        cmd = `start "" "${url}"`;
+        cmd = "cmd";
+        args = ["/c", "start", "", url];
     }
     else {
-        cmd = `xdg-open "${url}"`;
+        cmd = "xdg-open";
+        args = [url];
     }
-    exec(cmd, () => {
-        // Fire-and-forget — ignore errors (user can open manually)
-    });
+    const child = spawn(cmd, args, { stdio: "ignore", detached: true });
+    child.unref();
 }
 function sleep(ms, signal) {
     return new Promise((resolve, reject) => {
