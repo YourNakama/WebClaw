@@ -54340,10 +54340,17 @@ app.all("/mcp", bearerAuth, async (req, res) => {
     const existingSessionId = ownerIndex.get(tokenHash);
     if (existingSessionId && sessions.has(existingSessionId)) {
       const entry2 = sessions.get(existingSessionId);
-      entry2.state.octokit = createOctokit(githubToken);
-      entry2.lastActivity = Date.now();
-      await entry2.transport.handleRequest(req, res, req.body);
-      return;
+      const body = req.body;
+      const isInit = body?.method === "initialize" || Array.isArray(body) && body.some((m) => m.method === "initialize");
+      if (isInit) {
+      } else {
+        req.headers["mcp-session-id"] = existingSessionId;
+        req.rawHeaders.push("mcp-session-id", existingSessionId);
+        entry2.state.octokit = createOctokit(githubToken);
+        entry2.lastActivity = Date.now();
+        await entry2.transport.handleRequest(req, res, req.body);
+        return;
+      }
     }
     if (sessions.size >= MAX_SESSIONS) {
       res.status(503).json({ error: "Server busy, try again later" });

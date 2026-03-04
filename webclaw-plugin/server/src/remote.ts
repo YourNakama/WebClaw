@@ -235,13 +235,28 @@ app.all("/mcp", bearerAuth, async (req: Request, res: Response) => {
     const existingSessionId = ownerIndex.get(tokenHash);
     if (existingSessionId && sessions.has(existingSessionId)) {
       const entry = sessions.get(existingSessionId)!;
-      entry.state.octokit = createOctokit(githubToken);
-      entry.lastActivity = Date.now();
-      await entry.transport.handleRequest(req, res, req.body);
-      return;
+
+      // Check if this is a re-initialization request (client lost session context)
+      const body = req.body;
+      const isInit = body?.method === "initialize" ||
+        (Array.isArray(body) && body.some((m: { method?: string }) => m.method === "initialize"));
+
+      if (isInit) {
+        // Client wants to re-initialize → create a fresh session (Path 3 below)
+        // createSession will replace the old one via ownerIndex
+      } else {
+        // Inject the session ID so the SDK transport accepts the request
+        // Both headers (Express) and rawHeaders (Hono/SDK adapter) must be set
+        req.headers["mcp-session-id"] = existingSessionId;
+        req.rawHeaders.push("mcp-session-id", existingSessionId);
+        entry.state.octokit = createOctokit(githubToken);
+        entry.lastActivity = Date.now();
+        await entry.transport.handleRequest(req, res, req.body);
+        return;
+      }
     }
 
-    // Path 3: truly new session
+    // Path 3: truly new session (or re-initialization)
     if (sessions.size >= MAX_SESSIONS) {
       res.status(503).json({ error: "Server busy, try again later" });
       return;
