@@ -1,6 +1,6 @@
 import { randomUUID, createHash } from "crypto";
 // --- Configuration ---
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23ctlK0eSRxyelzeNs";
+const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23liVAuXEu16DSB7bd";
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
 const SERVER_URL = process.env.SERVER_URL || "http://localhost:3000";
 // --- Map size limits (DoS protection) ---

@@ -75,6 +75,9 @@ function createSession(githubToken: string): SessionEntry {
 
 const app = express();
 
+// Trust Railway's reverse proxy (fixes X-Forwarded-For / rate-limit errors)
+app.set("trust proxy", 1);
+
 // JSON body parsing with size limit
 app.use(express.json({ limit: "100kb" }));
 

@@ -49400,7 +49400,7 @@ function requireBearerAuth({ verifier, requiredScopes = [], resourceMetadataUrl 
 
 // dist/oauth.js
 import { randomUUID, createHash as createHash2 } from "crypto";
-var GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23ctlK0eSRxyelzeNs";
+var GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23liVAuXEu16DSB7bd";
 var GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
 var SERVER_URL = process.env.SERVER_URL || "http://localhost:3000";
 var MAX_CLIENTS = 1e3;
@@ -54181,6 +54181,7 @@ function createSession(githubToken) {
   return entry;
 }
 var app = (0, import_express7.default)();
+app.set("trust proxy", 1);
 app.use(import_express7.default.json({ limit: "100kb" }));
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
