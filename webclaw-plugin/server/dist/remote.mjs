@@ -54231,13 +54231,13 @@ app.all("/mcp", bearerAuth, async (req, res) => {
       return;
     }
     entry.state.octokit = createOctokit(githubToken);
-    await entry.transport.handleRequest(req, res);
+    await entry.transport.handleRequest(req, res, req.body);
     return;
   }
   if (req.method === "POST") {
     const entry = createSession(githubToken);
     await entry.server.connect(entry.transport);
-    await entry.transport.handleRequest(req, res);
+    await entry.transport.handleRequest(req, res, req.body);
     return;
   }
   res.status(404).json({ error: "Session not found" });

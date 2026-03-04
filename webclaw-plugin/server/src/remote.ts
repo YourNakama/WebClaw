@@ -154,7 +154,7 @@ app.all("/mcp", bearerAuth, async (req: Request, res: Response) => {
     }
 
     entry.state.octokit = createOctokit(githubToken);
-    await entry.transport.handleRequest(req, res);
+    await entry.transport.handleRequest(req, res, req.body);
     return;
   }
 
@@ -162,7 +162,7 @@ app.all("/mcp", bearerAuth, async (req: Request, res: Response) => {
   if (req.method === "POST") {
     const entry = createSession(githubToken);
     await entry.server.connect(entry.transport);
-    await entry.transport.handleRequest(req, res);
+    await entry.transport.handleRequest(req, res, req.body);
     return;
   }
 
