@@ -6,6 +6,7 @@ import type {
 } from "@modelcontextprotocol/sdk/server/auth/provider.js";
 import type { OAuthRegisteredClientsStore } from "@modelcontextprotocol/sdk/server/auth/clients.js";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import { InvalidTokenError, ServerError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import type {
   OAuthClientInformationFull,
   OAuthTokens,
@@ -285,11 +286,11 @@ export class GitHubOAuthProvider implements OAuthServerProvider {
         },
       });
     } catch {
-      throw new Error("Failed to verify token with GitHub");
+      throw new ServerError("Failed to verify token with GitHub");
     }
 
     if (!apiRes.ok) {
-      throw new Error("Invalid GitHub token");
+      throw new InvalidTokenError("Invalid GitHub token");
     }
 
     const user = (await apiRes.json()) as { login: string; id: number };

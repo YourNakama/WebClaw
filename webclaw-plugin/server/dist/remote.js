@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { randomUUID, createHash } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -114,6 +115,21 @@ app.use((req, res, next) => {
     }
     next();
 });
+// Rate limiting
+const globalLimiter = rateLimit({
+    windowMs: 60_000, // 1 minute
+    max: 120, // 120 req/min per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+const authLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 20, // 20 req/min per IP on auth endpoints
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(globalLimiter);
+app.use(["/authorize", "/token", "/register", "/github/callback"], authLimiter);
 // OAuth routes: /.well-known/*, /authorize, /token, /register
 app.use(mcpAuthRouter({
     provider,

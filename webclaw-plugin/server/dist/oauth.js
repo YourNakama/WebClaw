@@ -1,4 +1,5 @@
 import { randomUUID, createHash } from "crypto";
+import { InvalidTokenError, ServerError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 // --- Configuration ---
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23liVAuXEu16DSB7bd";
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
@@ -197,10 +198,10 @@ export class GitHubOAuthProvider {
             });
         }
         catch {
-            throw new Error("Failed to verify token with GitHub");
+            throw new ServerError("Failed to verify token with GitHub");
         }
         if (!apiRes.ok) {
-            throw new Error("Invalid GitHub token");
+            throw new InvalidTokenError("Invalid GitHub token");
         }
         const user = (await apiRes.json());
         // expiresAt is REQUIRED by the MCP SDK bearerAuth middleware.

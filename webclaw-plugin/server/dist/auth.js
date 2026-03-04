@@ -71,20 +71,32 @@ export async function pollForAccessToken(deviceCode, interval, expiresIn, signal
     throw new Error("Device code expired (timeout). Please restart the authentication flow.");
 }
 export function openBrowser(url) {
+    // Validate URL to prevent command injection (especially on Windows via cmd.exe)
+    let parsed;
+    try {
+        parsed = new URL(url);
+    }
+    catch {
+        throw new Error("Invalid URL");
+    }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        throw new Error("Only http/https URLs are allowed");
+    }
+    const safeUrl = parsed.toString();
     const platform = process.platform;
     let cmd;
     let args;
     if (platform === "darwin") {
         cmd = "open";
-        args = [url];
+        args = [safeUrl];
     }
     else if (platform === "win32") {
         cmd = "cmd";
-        args = ["/c", "start", "", url];
+        args = ["/c", "start", "", safeUrl];
     }
     else {
         cmd = "xdg-open";
-        args = [url];
+        args = [safeUrl];
     }
     const child = spawn(cmd, args, { stdio: "ignore", detached: true });
     child.unref();

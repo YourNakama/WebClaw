@@ -3,3 +3,4 @@
 .env.production
 .env.*.local
 node_modules/
+server/dist/
