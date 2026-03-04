@@ -66,10 +66,13 @@ function createSession(githubToken: string): SessionEntry {
   const oh = hashToken(githubToken);
 
   // Replace any existing session for the same owner (1 active session per user)
+  // Preserve config from old session so re-initialization doesn't lose vault selection
+  let previousConfig: SessionState["config"] = null;
   const oldSessionId = ownerIndex.get(oh);
   if (oldSessionId) {
     const old = sessions.get(oldSessionId);
     if (old) {
+      previousConfig = old.state.config;
       old.state.octokit = null;
       old.state.config = null;
     }
@@ -83,7 +86,7 @@ function createSession(githubToken: string): SessionEntry {
   });
 
   const octokit = createOctokit(githubToken);
-  const sessionState: SessionState = { config: null, octokit };
+  const sessionState: SessionState = { config: previousConfig, octokit };
 
   registerTools(
     mcpServer,
